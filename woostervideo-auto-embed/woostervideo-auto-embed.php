@@ -82,14 +82,32 @@ function woostervideoautoembed_settings_page() {
 <?php } ?>
 <?php
 // the magic where we use RegEx to match the URL entered in the post and replace it with the embed code
-wp_embed_register_handler( 'woostervideo', '#rtmp://adobeflash.wooster.edu/vod/(.+)#', 'wp_embed_handler_woostervideo');
+wp_embed_register_handler( 'woostervideo', '#http://adobeflash.wooster.edu/vod/(.+)#', 'wp_embed_handler_woostervideo');
+
+function right($string,$chars) 
+{ 
+   $vright = substr($string, strlen($string)-$chars,$chars); 
+   return $vright; 
+}
 
 function wp_embed_handler_woostervideo( $matches, $attr, $url, $rawattr ) {
 	$width = get_option('woostervideoautoembed_player_width', '480');
 	$height = get_option('woostervideoautoembed_player_height', '360');
+	$path = '';
+
+	if(strcmp(right(strtolower($matches[1]),3), 'flv')==0)
+	{
+	 $path = str_replace('.flv', '', strtolower($matches[1]));
+	}
+	else
+	{
+	 $path = 'mp4:' . $matches[1];
+	}
+
+	echo $path;
 
 	$embed = sprintf(
-			'<object id="flowplayer" width="' . esc_attr($width) . '" height="' . esc_attr($height) . '" data="http://webapps.wooster.edu/player/swf/flowplayer.swf" type="application/x-shockwave-flash"><param name="movie" value="http://webapps.wooster.edu/player/swf/flowplayer.swf" /><param name="allowfullscreen" value="true" /><param name="flashvars" value=\'config={"key":"#$28d4f4f3f205e518e4a","clip":{"provider":"rtmp","live":true,"url":"%1$s","autoBuffering":true,"autoPlay":false},"plugins":{"rtmp":{"url":"flowplayer.rtmp.swf","netConnectionUrl":"rtmp://adobeflash.wooster.edu/vod"}}}\' /></object>',
+			'<object id="flowplayer" width="' . esc_attr($width) . '" height="' . esc_attr($height) . '" data="http://webapps.wooster.edu/player/swf/flowplayer.swf" type="application/x-shockwave-flash"><param name="movie" value="http://webapps.wooster.edu/player/swf/flowplayer.swf" /><param name="allowfullscreen" value="true" /><param name="flashvars" value=\'config={"key":"#$28d4f4f3f205e518e4a","clip":{"provider":"rtmp","live":true,"url":  "' . $path . '","autoBuffering":true,"autoPlay": true  },"plugins":{"rtmp":{"url":"flowplayer.rtmp.swf","netConnectionUrl":"rtmp://adobeflash.wooster.edu/vod"}}}\' /></object>',
 			esc_attr($matches[1])
 			);
 

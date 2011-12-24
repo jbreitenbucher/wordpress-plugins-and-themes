@@ -37,11 +37,11 @@ function create_classroom_post_type() {
 		'description' => 'A post type for entering classroom information.',
 		'public' => true,
 		'hierarchical' => false,
-		'supports' => array('thumbnail','excerpt'),
-		'rewrite' => array('slug' => 'classrooms'),
-		'has_archive' => true,
+		'supports' => array('thumbnail','title'),
+		'rewrite' => array('slug' => 'classroom'),
+		'has_archive' => 'classrooms',
 	);
-	register_post_type('classroom',$args);
+	register_post_type('itclassroom',$args);
 }
 
 /** Customize the icon for the classroom post type */
@@ -50,10 +50,10 @@ function set_classroom_icon() {
 	global $post_type;
 	?>
 	<style>
-	<?php if (($_GET['post_type'] == 'classroom') || ($post_type == 'classroom')) : ?>
+	<?php if (($_GET['post_type'] == 'itclassroom') || ($post_type == 'itclassroom')) : ?>
 	#icon-edit { background:transparent url('<?php echo get_bloginfo('url');?>/wp-admin/images/icons32.png') no-repeat -600px -5px; }
 	<?php endif; ?>
- 
+
 	#adminmenu #menu-posts-itpeople div.wp-menu-image{background:transparent url('<?php echo get_bloginfo('url');?>/wp-admin/images/menu.png') no-repeat scroll -300px -33px;}
 	#adminmenu #menu-posts-classroom:hover div.wp-menu-image,#adminmenu #menu-posts-classroom.wp-has-current-submenu div.wp-menu-image{background:transparent url('<?php echo get_bloginfo('url');?>/wp-admin/images/menu.png') no-repeat scroll -300px -1px;}		
         </style>
@@ -63,8 +63,227 @@ function set_classroom_icon() {
 /** Remove support for WYSIWYG editor on classroom post type */
 add_action('init', 'classroom_custom_init');
 	function classroom_custom_init() {
-		remove_post_type_support('classroom', 'editor');
-	}
+		remove_post_type_support('itclassroom', 'editor');
+	}	
+
+/** Create a custom taxonomies for classroom post type */
+add_action( 'init', 'it_add_taxonomies', 0 );
+function it_add_taxonomies(){
+	$labels_building = array(
+	    'name' => _x( 'Buildings', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Building', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Buildings' ),
+	    'popular_items' => __( 'Popular Buildings' ),
+	    'all_items' => __( 'All Buildings' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Building' ), 
+	    'update_item' => __( 'Update Building' ),
+	    'add_new_item' => __( 'Add New Building' ),
+	    'new_item_name' => __( 'New Building Name' ),
+	    'separate_items_with_commas' => __( 'Separate buildings with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove buildings' ),
+	    'choose_from_most_used' => __( 'Choose from the most used buildings' ),
+	    'menu_name' => __( 'Buildings' ),
+	  );
+
+	$labels_seating = array(
+	    'name' => _x( 'Seating Capacities', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Seating Capacity', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Seating Capacities' ),
+	    'popular_items' => __( 'Popular Seating Capacities' ),
+	    'all_items' => __( 'All Seating Capacities' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Seating Capacity' ), 
+	    'update_item' => __( 'Update Seating Capacity' ),
+	    'add_new_item' => __( 'Add New Seating Capacity' ),
+	    'new_item_name' => __( 'New Seating Capacity Name' ),
+	    'separate_items_with_commas' => __( 'Separate seating capacities with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove seating capacities' ),
+	    'choose_from_most_used' => __( 'Choose from the most used seating capacities' ),
+	    'menu_name' => __( 'Seating Capacities' ),
+	  );
+
+	$labels_classroom = array(
+	    'name' => _x( 'Classroom Types', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Classroom Type', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Classroom Types' ),
+	    'popular_items' => __( 'Popular Classroom Types' ),
+	    'all_items' => __( 'All Classroom Types' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Classroom Type' ), 
+	    'update_item' => __( 'Update Classroom Type' ),
+	    'add_new_item' => __( 'Add New Classroom Type' ),
+	    'new_item_name' => __( 'New Role Classroom Type' ),
+	    'separate_items_with_commas' => __( 'Separate classroom types with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove classroom types' ),
+	    'choose_from_most_used' => __( 'Choose from the most used classroom types' ),
+	    'menu_name' => __( 'Classroom Types' ),
+	  );
+
+	$labels_installed_hardware = array(
+	    'name' => _x( 'Installed Hardware', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Installed Hardware', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Installed Hardware' ),
+	    'popular_items' => __( 'Popular Installed Hardware' ),
+	    'all_items' => __( 'All Installed Hardware' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Installed Hardware' ), 
+	    'update_item' => __( 'Update Installed Hardware' ),
+	    'add_new_item' => __( 'Add New Installed Hardware' ),
+	    'new_item_name' => __( 'New Installed Hardware Name' ),
+	    'separate_items_with_commas' => __( 'Separate installed hardware with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove installed hardware' ),
+	    'choose_from_most_used' => __( 'Choose from the most used installed hardware' ),
+	    'menu_name' => __( 'Installed Hardware' ),
+	  );
+
+	$labels_specialized_hardware = array(
+	    'name' => _x( 'Specialized Hardware', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Specialized Hardware', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Specialized Hardware' ),
+	    'popular_items' => __( 'Popular Specialized Hardware' ),
+	    'all_items' => __( 'All Specialized Hardware' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Specialized Hardware' ), 
+	    'update_item' => __( 'Update Specialized Hardware' ),
+	    'add_new_item' => __( 'Add New Specialized Hardware' ),
+	    'new_item_name' => __( 'New Specialized Hardware Name' ),
+	    'separate_items_with_commas' => __( 'Separate specialized hardware with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove specialized hardware' ),
+	    'choose_from_most_used' => __( 'Choose from the most used specialized hardware' ),
+	    'menu_name' => __( 'Specialized Hardware' ),
+	  );
+
+	$labels_other_features = array(
+	    'name' => _x( 'Other Features', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Other Feature', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Other Features' ),
+	    'popular_items' => __( 'Popular Other Features' ),
+	    'all_items' => __( 'All Other Features' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Other Feature' ), 
+	    'update_item' => __( 'Update Other Feature' ),
+	    'add_new_item' => __( 'Add New Other Feature' ),
+	    'new_item_name' => __( 'New Other Feature Name' ),
+	    'separate_items_with_commas' => __( 'Separate other features with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove other features' ),
+	    'choose_from_most_used' => __( 'Choose from the most used other features' ),
+	    'menu_name' => __( 'Other Features' ),
+	  );
+
+	$labels_installed_software = array(
+	    'name' => _x( 'Installed Software', 'taxonomy general name' ),
+	    'singular_name' => _x( 'Installed Software', 'taxonomy singular name' ),
+	    'search_items' =>  __( 'Search Installed Software' ),
+	    'popular_items' => __( 'Popular Installed Software' ),
+	    'all_items' => __( 'All Installed Software' ),
+	    'parent_item' => null,
+	    'parent_item_colon' => null,
+	    'edit_item' => __( 'Edit Installed Software' ), 
+	    'update_item' => __( 'Update Installed Software' ),
+	    'add_new_item' => __( 'Add New Installed Software' ),
+	    'new_item_name' => __( 'New Installed Software Name' ),
+	    'separate_items_with_commas' => __( 'Separate installed software with commas' ),
+	    'add_or_remove_items' => __( 'Add or remove installed software' ),
+	    'choose_from_most_used' => __( 'Choose from the most used installed software' ),
+	    'menu_name' => __( 'Installed Software' ),
+	  );
+
+	register_taxonomy(  
+    	'building',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_building,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'buildings', 'with_front' => false ),
+    		)  
+	);
+
+	register_taxonomy(  
+    	'seating-capacity',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_seating,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'seating-capacities', 'with_front' => false ),
+    		)  
+	);
+
+	register_taxonomy(  
+    	'classroom-style',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_classroom,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'classroom-styles', 'with_front' => false ),
+    		)  
+	);
+
+	register_taxonomy(  
+    	'installed-hardware',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_installed_hardware,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'installed-hardware', 'with_front' => false ),
+    		)  
+	);
+
+	register_taxonomy(  
+    	'specialized-hardware',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_specialized_hardware,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'specialized-hardware', 'with_front' => false ),
+    		)  
+	);
+
+	register_taxonomy(  
+    	'other-feature',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_other_features,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'other-features', 'with_front' => false ),
+    		)  
+	);
+
+	register_taxonomy(  
+    	'installed-software',  
+    	'itclassroom',  
+    		array(  
+        	'hierarchical' => false,  
+        	'labels' => $labels_installed_software,  
+        	'query_var' => true,  
+        	'rewrite' => array( 'slug' => 'installed-software', 'with_front' => false ),
+    		)  
+	);
+}
+
+/** Remove the role taxonomy from the classroom post type screen */
+add_action( 'admin_menu', 'remove_classroom_taxonomy' );	
+function remove_classroom_taxonomy() {
+	remove_meta_box( 'tagsdiv-building', 'itclassroom', 'side' );
+	remove_meta_box( 'tagsdiv-seating-capacity', 'itclassroom', 'side' );
+	remove_meta_box( 'tagsdiv-classroom-style', 'itclassroom', 'side' );
+	remove_meta_box( 'tagsdiv-installed-hardware', 'itclassroom', 'side' );
+	remove_meta_box( 'tagsdiv-specialized-hardware', 'itclassroom', 'side' );
+	remove_meta_box( 'tagsdiv-other-feature', 'itclassroom', 'side' );
+	remove_meta_box( 'tagsdiv-installed-software', 'itclassroom', 'side' );
+}
 
 /**
  * Create a custom Metabox for the classroom post type
@@ -72,144 +291,111 @@ add_action('init', 'classroom_custom_init');
  * @link http://www.billerickson.net/wordpress-metaboxes/
  *
  */
-function classroom_create_metaboxes( $meta_boxes ) {
+add_action( 'cmb_render_taxonomy_multicheck_inline', 'it_cmb_render_taxonomy_multicheck_inline', 10, 2 );
+function it_cmb_render_taxonomy_multicheck_inline( $field, $meta ) {
+		echo '<ul class="cmb_radio_inline_option">';
+		$names = wp_get_object_terms( $post->ID, $field['taxonomy'] );
+		$terms = get_terms( $field['taxonomy'], 'hide_empty=0' );
+		foreach ($terms as $term) {
+			echo '<li class="cmb_radio_inline_option"><input type="checkbox" name="', $field['id'], '[]" id="', $field['id'], '" value="', $term->name , '"'; 
+			foreach ($names as $name) {
+				if ( $term->slug == $name->slug ){ echo ' checked="checked" ';};
+			}
+			echo' /><label>', $term->name , '</label></li>';
+		}
+		echo '</ul>';
+}
+
+/**
+ * Create a custom metaboxes for the itpeople and itclassroom post types
+ *
+ * @link http://www.billerickson.net/wordpress-metaboxes/
+ *
+ */
+add_filter( 'cmb_meta_boxes' , 'it_create_metaboxes' );
+function it_create_metaboxes( $meta_boxes ) {
 	$prefix = 'it_'; // start with an underscore to hide fields from custom fields list
 	$meta_boxes[] = array(
-	'id' => 'info_metabox',
-	'title' => 'Information',
-	'pages' => array('classroom'), // post type
-	'context' => 'normal',
-	'priority' => 'low',
-	'show_names' => true, // Show field names on the left
-	'fields' => array(
-		array(
-			'name' => 'Notes',
-			'desc' => 'Give a brief description of the classroom.',
-			'id' => $prefix . 'notes_wysiwyg',
-			'type' => 'wysiwyg'
+		'id' => 'classroom_info_metabox',
+		'title' => 'Classroom Information',
+		'pages' => array('itclassroom'), // post type
+		'context' => 'normal',
+		'priority' => 'low',
+		'show_names' => true, // Show field names on the left
+		'fields' => array(
+			array(
+				'name' => 'Notes',
+				'desc' => 'Give a brief description of the classroom.',
+				'id' => $prefix . 'notes_wysiwyg',
+				'type' => 'wysiwyg',
+				'options' => array(
+					'wpautop' => true, // use wpautop?
+					'media_buttons' => false, // show insert/upload button(s)
+				),
+			),
+			array(
+				'name' => 'Building',
+				'desc' => '',
+				'id' => $prefix . 'building_taxonomy',
+				'taxonomy' => 'building', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
+			array(
+				'name' => 'Seating Capacity',
+				'desc' => '',
+				'id' => $prefix . 'seating_capacity_taxonomy',
+				'taxonomy' => 'seating-capacity', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
+			array(
+				'name' => 'Classroom Style',
+				'desc' => '',
+				'id' => $prefix . 'classroom_style_taxonomy',
+				'taxonomy' => 'classroom-style', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
+			array(
+				'name' => 'Installed Hardware',
+				'desc' => '',
+				'id' => $prefix . 'installed_hardware_taxonomy',
+				'taxonomy' => 'installed-hardware', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
+			array(
+				'name' => 'Specialized Hardware',
+				'desc' => '',
+				'id' => $prefix . 'specialized_hardware_taxonomy',
+				'taxonomy' => 'specialized-hardware', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
+			array(
+				'name' => 'Other Features',
+				'desc' => '',
+				'id' => $prefix . 'other_features_taxonomy',
+				'taxonomy' => 'other-feature', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
+			array(
+				'name' => 'Installed Software',
+				'desc' => '',
+				'id' => $prefix . 'installed_software_taxonomy',
+				'taxonomy' => 'installed-software', //Enter Taxonomy Slug
+				'type' => 'taxonomy_multicheck_inline',	
+			),
 		),
-		array(
-			'name' => 'Building',
-			'desc' => '',
-			'id' => $prefix . 'building_taxonomy_select',
-			'taxonomy' => 'building', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-		array(
-			'name' => 'Seating Capacity',
-			'desc' => '',
-			'id' => $prefix . 'seating_capacity_taxonomy_select',
-			'taxonomy' => 'seating-capacity', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-		array(
-			'name' => 'Classroom Style',
-			'desc' => '',
-			'id' => $prefix . 'classroom_style_taxonomy_select',
-			'taxonomy' => 'classroom-style', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-		array(
-			'name' => 'Installed Hardware',
-			'desc' => '',
-			'id' => $prefix . 'installed_hardware_taxonomy_select',
-			'taxonomy' => 'installed-hardware', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-		array(
-			'name' => 'Specialized Hardware',
-			'desc' => '',
-			'id' => $prefix . 'specialized_hardware_taxonomy_select',
-			'taxonomy' => 'specialized-hardware', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-		array(
-			'name' => 'Other Features',
-			'desc' => '',
-			'id' => $prefix . 'other_features_taxonomy_select',
-			'taxonomy' => 'other-feature', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-		array(
-			'name' => 'Installed Software',
-			'desc' => '',
-			'id' => $prefix . 'installed_software_taxonomy_select',
-			'taxonomy' => 'installed-software', //Enter Taxonomy Slug
-			'type' => 'taxonomy_select',	
-		),
-	),
 	);
 	return $meta_boxes;
- }
-add_filter( 'cmb_meta_boxes' , 'classroom_create_metaboxes' );
- 
+}
+
 /**
  * Initialize Metabox Class
  * see /lib/metabox/example-functions.php for more information
  *
- */ 
-function classroom_initialize_cmb_meta_boxes() {
+ */
+add_action( 'init', 'it_initialize_cmb_meta_boxes', 9999 );
+function it_initialize_cmb_meta_boxes() {
     if ( !class_exists( 'cmb_Meta_Box' ) ) {
-        require_once( CHILD_DIR . '/lib/metabox/init.php' );
+        require_once( plugins_dir_path( __FILE__) . '/lib/metabox/init.php' );
     }
 }
-add_action( 'init', 'classroom_initialize_cmb_meta_boxes', 9999 );
-
-/** Create a custom taxonomy with $name for $post_type */
-function it_add_taxonomy( $name, $post_type ) {
-	$name = strtolower( $name );
-	add_action( 'init', function() use( $name, $post_type ) {
-		$upper = ucwords( $name );
-		
-		$labels = array(
-					'name' => _x( "$upper".'s', 'taxonomy general name' ),
-			    'singular_name' => _x( "$upper", 'taxonomy singular name' ),
-			    'search_items' =>  __( "Search $upper".'s' ),
-			    'popular_items' => __( "Popular $upper".'s' ),
-			    'all_items' => __( "All $upper".'s' ),
-			    'parent_item' => null,
-			    'parent_item_colon' => null,
-			    'edit_item' => __( "Edit $upper" ), 
-			    'update_item' => __( "Update $upper" ),
-			    'add_new_item' => __( "Add New $upper" ),
-			    'new_item_name' => __( "New $upper Name" ),
-			    'separate_items_with_commas' => __( "Separate $name".'s'." with commas" ),
-			    'add_or_remove_items' => __( "Add or remove #name".'s' ),
-			    'choose_from_most_used' => __( "Choose from the most used $name".'s' ),
-			    'menu_name' => __( "$upper" ),
-			);
-			
-			register_taxonomy(
-				$name,
-				$post_type,
-				array(
-					'hierarchival' => false,
-					'labels' => $labels,
-					'query_var' => true,
-					'rewrite' => array( 'slug' => "$name", 'with_front' => false),
-				)
-			);
-		}, 0
-	);
-}
-
-it_add_taxonomy( 'building', 'classroom' );
-it_add_taxonomy( 'seating-capacity', 'classroom' );
-it_add_taxonomy( 'classroom-style', 'classroom' );
-it_add_taxonomy( 'installed-hardware', 'classroom' );
-it_add_taxonomy( 'specialized-hardware', 'classroom' );
-it_add_taxonomy( 'other-feature', 'classroom' );
-it_add_taxonomy( 'installed-software', 'classroom' );
-
-/** Remove the role taxonomy from the classroom post type screen */
-add_action( 'admin_menu', 'remove_custom_taxonomy' );	
-	function remove_custom_taxonomy() {
-		remove_meta_box( 'tagsdiv-building', 'classroom', 'side' );
-		remove_meta_box( 'tagsdiv-seating-capacity', 'classroom', 'side' );
-		remove_meta_box( 'tagsdiv-classroom-style', 'classroom', 'side' );
-		remove_meta_box( 'tagsdiv-installed-hardware', 'classroom', 'side' );
-		remove_meta_box( 'tagsdiv-specialized-hardware', 'classroom', 'side' );
-		remove_meta_box( 'tagsdiv-other-feature', 'classroom', 'side' );
-		remove_meta_box( 'tagsdiv-installed-software', 'classroom', 'side' );
-	}
 ?>

@@ -53,24 +53,23 @@ function wootubeautoembed_section_text() {
 
 function wootubeautoembed_width() {
 	$options = get_option('wootubeautoembed-settings-group');
-	echo "<input id='wootubeautoembed_player_width' type='text' name='wootubeautoembed-settings-group[wootubeautoembed_player_width]' size='10' value='{$options['wootubeautoembed_player_width']}' /> The default width of the WooTube video."
+	echo "<input id='wootubeautoembed_player_width' type='text' name='wootubeautoembed-settings-group[wootubeautoembed_player_width]' size='10' value='{$options['wootubeautoembed_player_width']}' /> The default width of the WooTube video.";
 }
 
 function wootubeautoembed_height() {
 	$options = get_option('wootubeautoembed-settings-group');
-	echo "<input id='wootubeautoembed_player_height' type='text' name='wootubeautoembed-settings-group[wootubeautoembed_player_height]' size='10' value='{$options['wootubeautoembed_player_height']}' /> The default height of the WooTube video."
+	echo "<input id='wootubeautoembed_player_height' type='text' name='wootubeautoembed-settings-group[wootubeautoembed_player_height]' size='10' value='{$options['wootubeautoembed_player_height']}' /> The default height of the WooTube video.";
 }
 
 function wootubeautoembed_validate($input){
 	$options = get_option('wootubeautoembed-settings-group');
 	$options['wootubeautoembed_player_width'] = trim($input['wootubeautoembed_player_width']);
 	$options['wootubeautoembed_player_height'] = trim($input['wootubeautoembed_player_height']);
-	if(!(int) $options['wootubeautoembed_player_width'] || !(int) $options['wootubeautoembed_player_height'] )) {
+	if(!(int) $options['wootubeautoembed_player_width'] || !(int) $options['wootubeautoembed_player_height'] ) {
 		$options['wootubeautoembed_player_width'] = '';
 		$options['wootubeautoembed_player_height'] = '';
 	}
 	return $options;
-	}
 }
 
 // create the actual contents of the settings page

@@ -28,7 +28,7 @@ function gsl_gslstaff_columns($defaults) {
     $columns = array(
         'cb' => '<input type="checkbox" />',
         'title' => __( 'Name' ),
-        'role' => __( 'Role' ),
+        'gslrole' => __( 'Role' ),
         'date' => __( 'Date' )
     );
 
@@ -91,9 +91,9 @@ function gsl_gslstaff_sortable_columns( $columns ) {
 function gsl_name_column_orderby( $query ) {
     if( is_admin() ) {
         if (isset($query->query_vars['post_type'])) {
-            if ($query->query_vars['post_type'] == 'itpeople') {
+            if ($query->query_vars['post_type'] == 'gslstaff') {
 
-                $query->set('meta_key', 'it_last_name_text');
+                $query->set('meta_key', 'gsl_last_name_text');
                 $query->set('orderby', 'meta_value');
             }
         }
@@ -207,7 +207,7 @@ add_filter( 'pre_get_posts', 'gsl_change_gslstaff_size' ); // Hook our custom fu
 
 function gsl_tax_filter_posts_per_page( $value ) {
     if ( !is_admin() ) {
-        return ( is_tax( 'role' ) ) ? genesis_get_option( 'gsl_staff_posts_per_page', GSL_SETTINGS_FIELD ) : $value;
+        return ( is_tax( 'gslrole' ) ) ? genesis_get_option( 'gsl_staff_posts_per_page', GSL_SETTINGS_FIELD ) : $value;
     }
 }
 add_filter( 'option_posts_per_page', 'gsl_tax_filter_posts_per_page' );
@@ -261,7 +261,7 @@ add_action( 'init', 'gsl_gslstaff_custom_init' );
  */
 
 function gsl_remove_custom_taxonomy() {
-    remove_meta_box( 'tagsdiv-role', 'gslstaff', 'side' );
+    remove_meta_box( 'tagsdiv-gslrole', 'gslstaff', 'side' );
 }
 add_action( 'admin_menu', 'gsl_remove_custom_taxonomy' );
 
@@ -365,7 +365,7 @@ add_action( 'pre_get_posts', 'gsl_no_child_posts' );
 
 function gsl_gslstaff_alpha_order_posts( $query ) {
 
-    if ( $query->is_main_query() && !is_admin() && is_tax( 'role' ) && !is_page_template( 'page-gslstaff.php' ) ) {
+    if ( $query->is_main_query() && !is_admin() && is_tax( 'gslrole' ) && !is_page_template( 'page-gslstaff.php' ) ) {
         $query->set( 'meta_key', 'gsl_last_name_text' );
         $query->set( 'orderby', 'meta_value' );
         $query->set( 'order', 'ASC' );

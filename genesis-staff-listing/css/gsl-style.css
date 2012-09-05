@@ -1,0 +1,54 @@
+.contact {
+        width:350px;
+        padding-bottom:20px;
+}
+
+.person {
+        padding: 20px 0 0 0;
+}
+
+.name {
+	font-size: 20px;
+}
+
+.archive-page ul.feedlist li, .entry-content ul.feedlist li {
+	list-style-type: none;
+}
+
+.feedlist span.date {
+	font-size: 16px;
+	margin: 0 0 10px;
+}
+
+.feedlist img {
+	float: left;
+	padding: 0 5px 0 0;
+}
+
+.feedlist li h3 {
+	margin: 0 0 3px;
+}
+
+.odd {
+	background: #ddd;
+}
+
+.liaison {
+	text-align:right;
+}
+
+.classroom {
+	padding: 20px 0 0 0;
+}
+
+.room {
+	width: 465px;
+}
+
+.classroom-square {
+	padding-top: 10px;
+}
+
+.picture {
+    max-width: 320px;
+}

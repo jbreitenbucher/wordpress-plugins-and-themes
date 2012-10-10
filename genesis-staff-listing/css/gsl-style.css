@@ -29,26 +29,6 @@
 	margin: 0 0 3px;
 }
 
-.odd {
-	background: #ddd;
-}
-
-.liaison {
-	text-align:right;
-}
-
-.classroom {
-	padding: 20px 0 0 0;
-}
-
-.room {
-	width: 465px;
-}
-
-.classroom-square {
-	padding-top: 10px;
-}
-
 .picture {
     max-width: 320px;
 }

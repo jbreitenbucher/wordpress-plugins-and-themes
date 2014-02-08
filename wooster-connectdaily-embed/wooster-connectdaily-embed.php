@@ -81,16 +81,16 @@ function woosterconnectdailyembed_settings_page() {
 </div>
 <?php } ?>
 <?php
-wp_embed_register_handler( 'connectdaily', '#(\d+)#', 'wp_embed_handler_connectdaily' );
+wp_embed_register_handler( 'connectdaily', '#https://connectdaily\.wooster\.edu/ViewCal\.html\?dropdown=1&resource_id=([\d]+)#i', 'wp_embed_handler_connectdaily' );
 
-function wp_embed_handler_vconnectdaily( $matches, $attr, $url, $rawattr ) {
+function wp_embed_handler_connectdaily( $matches, $attr, $url, $rawattr ) {
 	$width = get_option('woosterconnectdailyembed_calendar_width', '800');
 	$height = get_option('woosterconnectdailyembed_calendar_height', '1024');
 
 	$embed = sprintf(
-			'<iframe frameborder=0 id="calendarframe" scrolling="auto" width=' . esc_attr($width) . ' height=' . esc_attr($height) . 'src="https://connectdaily.wooster.edu/ViewCal.html?dropdown=1&resource_id=%1"> Your browser doesn\'t support frames.
-Click <a href="https://connectdaily.wooster.edu/ViewCal.html?dropdown=1&resource_id=%1">here</a> to view the calendar.
-</IFRAME',
+			'<iframe frameborder="0" id="calendarframe" scrolling="auto" width="' . esc_attr($width) . '" height="' . esc_attr($height) . '" src="https://connectdaily.wooster.edu/ViewCal.html?dropdown=1&resource_id=%1$s"> Your browser doesn\'t support frames.
+Click <a href="https://connectdaily.wooster.edu/ViewCal.html?dropdown=1&resource_id=%1$s">here</a> to view the calendar.
+</iframe><br />To reserve this space please visit our <a href="http://calendar.wooster.edu/EditItem.html">Connect Daily Campus Calendar</a>.',
 			esc_attr($matches[1])
 			);
 

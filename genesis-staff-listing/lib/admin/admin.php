@@ -31,6 +31,7 @@ function gsl_register_settings() {
     add_settings_field('gsl_leadership_slug', 'Leadership Team Slugs', 'gsl_leadership_slug_setting', GSL_SETTINGS_FIELD , 'gsl_staff');
     add_settings_section('gsl_general','General Settings', 'gsl_general_section_text', GSL_SETTINGS_FIELD );
     add_settings_field('gsl_blog_cat', 'Blog Category', 'gsl_blog_cat_setting', GSL_SETTINGS_FIELD , 'gsl_general');
+    add_settings_field('gsl_staff_page', 'Title of Staff Page', 'gsl_staff_page_setting', GSL_SETTINGS_FIELD , 'gsl_general');
 }
 
 /**
@@ -48,7 +49,8 @@ function gsl_option_defaults() {
         'gsl_staff_role' => '',
         'gsl_staff_leadership_roles' => '',
         'gsl_staff_schedule' => '',
-        'gsl_blog_cat' => 'blog'
+        'gsl_blog_cat' => 'blog',
+        'gsl_staff_page' => 'staff'
     );
     return $arr;
 }
@@ -125,6 +127,20 @@ function gsl_blog_cat_setting() {
 }
 
 /**
+ * Staff Page
+ *
+ * @author      Jon Breitenbucher <jbreitenbucher@wooster.edu>
+ * @version     SVN: $Id$
+ * @since       1.0
+ *
+ */
+
+function gsl_staff_page_setting() {
+    echo '<p>' . _e( 'Enter the name or slug used for the Staff page.', 'gsl' ) . '</p>';
+    echo "<input type='text' name='" . GSL_SETTINGS_FIELD . "[gsl_staff_page]' size='20' value='" . genesis_get_option( 'gsl_staff_page', GSL_SETTINGS_FIELD ) . "' />";
+}
+
+/**
  * Reset
  *
  * @author      Jon Breitenbucher <jbreitenbucher@wooster.edu>
@@ -158,10 +174,10 @@ function gsl_notices() {
         return;
 
     if ( isset( $_REQUEST['reset'] ) && 'true' == $_REQUEST['reset'] ) {
-        echo '<div id="message" class="updated"><p><strong>' . __( 'Genesis Staff Listing Settings Reset', 'gsl' ) . '</strong></p></div>';
+        echo '<div id="message" class="updated"><p><strong>' . __( 'Bucknell Genesis Staff Listing Settings Reset', 'gsl' ) . '</strong></p></div>';
     }
     elseif ( isset( $_REQUEST['settings-updated'] ) && 'true' == $_REQUEST['settings-updated'] ) {  
-        echo '<div id="message" class="updated"><p><strong>' . __( 'Genesis Staff Listing Settings Saved', 'gsl' ) . '</strong></p></div>';
+        echo '<div id="message" class="updated"><p><strong>' . __( 'Bucknell Genesis Staff Listing Settings Saved', 'gsl' ) . '</strong></p></div>';
     }
 }
 
@@ -222,6 +238,7 @@ function gsl_staff_sanitization_filters() {
     genesis_add_option_filter( 'no_html', GSL_SETTINGS_FIELD, array( 'gsl_staff_schedule' ) );
     genesis_add_option_filter( 'no_html', GSL_SETTINGS_FIELD, array( 'gsl_staff_leadership_roles' ) );
     genesis_add_option_filter( 'no_html', GSL_SETTINGS_FIELD, array( 'gsl_blog_cat' ) );
+    genesis_add_option_filter( 'no_html', GSL_SETTINGS_FIELD, array( 'gsl_staff_page' ) );
 }
 
 /**

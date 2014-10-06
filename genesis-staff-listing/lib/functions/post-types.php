@@ -4,7 +4,7 @@
  *
  * This file registers any custom post types
  *
- * @package       technology
+ * @package       gsl
  * @author        Jon Breitenbucher <jbreitenbucher@wooster.edu>
  * @copyright     Copyright (c) 2012, The College of Wooster
  * @license       http://opensource.org/licenses/gpl-2.0.php GNU Public License

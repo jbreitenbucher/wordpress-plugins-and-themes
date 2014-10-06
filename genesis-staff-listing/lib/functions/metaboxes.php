@@ -4,7 +4,7 @@
  *
  * This file registers any custom metaboxes
  *
- * @package      technology
+ * @package      gsl
  * @author       Jon Breitenbucher <jbreitenbucher@wooster.edu>
  * @copyright    Copyright (c) 2012, The College of Wooster
  * @license      http://opensource.org/licenses/gpl-2.0.php GNU Public License
@@ -93,6 +93,13 @@ function gsl_create_metaboxes( $meta_boxes ) {
                 'taxonomy' => 'gslrole', //Enter Taxonomy Slug
                 'type' => 'taxonomy_select',    
             ),
+	array(
+		'name' => 'Areas of Expertise',
+		'desc' => 'What are your areas of expertise?',
+		'id' => $prefix . 'expertise_taxonomy_multicheck',
+		'taxonomy' => 'gslexpertise', //Enter Taxonomy Slug
+		'type' => 'taxonomy_multicheck',	
+	),
         ),
     );
     

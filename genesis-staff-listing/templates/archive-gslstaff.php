@@ -1,10 +1,10 @@
 <?php
 /**
- * Template Name: People Archive
+ * Template Name: Satff Archive
  *
  * This template will be used to list the itpeople post type archive.
  *
- * @package      technology
+ * @package     gsl
  * @author       Jon Breitenbucher <jbreitenbucher@wooster.edu>
  * @copyright    Copyright (c) 2012, The College of Wooster
  * @license      http://opensource.org/licenses/gpl-2.0.php GNU Public License
@@ -24,27 +24,48 @@
  *
  */
 
-add_action('genesis_before','it_archive_loop_setup');
-function it_archive_loop_setup() {
+add_action('genesis_before','gsl_archive_loop_setup');
+function gsl_archive_loop_setup() {
     
-    // Customize Before Loop
-    remove_action('genesis_before_loop','genesis_do_before_loop' );
-    add_action('genesis_before_loop','it_archive_before_loop');
+	if ( ! genesis_html5() ) {
+		// Customize Before Loop
+	    	remove_action('genesis_before_loop','genesis_do_before_loop' );
+	    	add_action('genesis_before_loop','gsl_archive_before_loop');
     
-    // Remove Post Info
-    remove_action('genesis_before_post_content', 'genesis_post_info');
+	    	// Remove Post Info
+	    	remove_action('genesis_before_post_content', 'genesis_post_info');
     
-    // Customize Post Content
-    remove_action('genesis_post_content','genesis_do_post_content');
-    add_action('genesis_post_content','it_archive_post_content');
+	    	// Customize Post Content
+	    	remove_action('genesis_post_content','genesis_do_post_content');
+	    	add_action('genesis_post_content','gsl_archive_post_content');
     
-    // Remove Title, After Title, and Post Image
-    remove_action('genesis_post_title', 'genesis_do_post_title');
-    remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
-    remove_action('genesis_post_content', 'genesis_do_post_image');
+	    	// Remove Title, After Title, and Post Image
+	    	remove_action('genesis_post_title', 'genesis_do_post_title');
+	    	remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
+	    	remove_action('genesis_post_content', 'genesis_do_post_image');
     
-    // Remove Post Meta
-    remove_action('genesis_after_post_content', 'genesis_post_meta');
+	    	// Remove Post Meta
+	    	remove_action('genesis_after_post_content', 'genesis_post_meta');
+	} else {
+	   	 // Customize Before Loop
+	    	remove_action('genesis_before_loop','genesis_do_before_loop' );
+	   	 add_action('genesis_before_loop','gsl_archive_before_loop');
+    
+	   	 // Remove Post Info
+	  	  remove_action( 'genesis_entry_header', 'genesis_post_info', 12 );
+    
+	    	// Customize Post Content
+		remove_action( 'genesis_entry_content', 'genesis_do_post_content' );
+		add_action( 'genesis_entry_content', 'gsl_archive_post_content' );
+    
+	    	// Remove Title, After Title, and Post Image
+		remove_action( 'genesis_entry_header', 'genesis_do_post_title' );
+		remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
+	    	remove_action( 'genesis_entry_header', 'genesis_do_post_format_image', 4 );
+    
+	   	 // Remove Post Meta
+	    	remove_action( 'genesis_entry_footer', 'genesis_post_meta' );
+	}
 }
 
 /**
@@ -57,6 +78,9 @@ function it_archive_loop_setup() {
  */
 
 function gsl_archive_before_loop() {
+    echo '<h1>' . get_the_title() . '</h1>';
+    global $post;
+    echo '<div class="page-content">' . apply_filters('the_content', $post->post_content) . '</div>';
     $c = 0; // set up a counter so we know which post we're currently showing
     $image_align = 'alignright'; // set up a variable to hold an extra CSS class
 }
@@ -79,6 +103,7 @@ function gsl_archive_post_content () {
     } else {
         $image_align = 'alignright';
     }
+    $expertise = get_the_term_list($post->ID, 'gslexpertise', '', ', ', '');
     printf( '<div id="post-%s" class="person clear">', get_the_ID() );
         //use the genesis_get_custom_field template tag to display each custom field value
         if (genesis_get_custom_field('gsl_title_text') != '') {
@@ -94,6 +119,13 @@ function gsl_archive_post_content () {
                         printf('<span class="email"> | e-mail: <a href="mailto:%s">%s</a></span>', antispambot(genesis_get_custom_field('gsl_email_address_text')), antispambot(genesis_get_custom_field('gsl_email_address_text')) );
                 }
                 echo '</div><!--#end contact-->';
+				
+	      if($expertise != ''){
+	            echo '<div class="expertise">';
+		 echo '<h3>Areas of expertise:</h3>';
+		             echo $expertise;
+		  echo '</div><!--#end expertise-->';
+		}
 
                 echo '<div ';
                     post_class('about');

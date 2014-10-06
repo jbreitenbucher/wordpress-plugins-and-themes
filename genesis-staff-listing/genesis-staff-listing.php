@@ -7,24 +7,28 @@ Description: This plugin adds a Staff custom post type and role taxonomy. It als
 Author: Jon Breitenbucher
 Author URI: http://orthogonalcreations.com
 
-Version: 1.0
+Version: 1.1
 
 License: GNU General Public License v2.0 (or later)
 License URI: http://www.opensource.org/licenses/gpl-license.php
 */
 
-// Define our settings
+/** Define our settings */
 define( 'GSL_SETTINGS_FIELD', 'gsl-settings' );
 
-// Admin
+/** Admin */
 require_once( plugin_dir_path( __FILE__ ) . 'lib/admin/admin.php' );
 
-// Add support for theme options
+/** Add support for theme options */
 add_action( 'admin_init', 'gsl_reset' );
 add_action( 'admin_init', 'gsl_register_settings' );
 add_action( 'admin_menu', 'gsl_add_menu', 100);
 add_action( 'admin_notices', 'gsl_notices' );
 add_action( 'genesis_settings_sanitizer_init', 'gsl_staff_sanitization_filters' );
+
+/** Add new featured image sizes */
+add_image_size('profile-picture-listing', 325, 183, TRUE);
+add_image_size('profile-picture-single', 325, 183, TRUE);
 
 // Functions
 require_once( plugin_dir_path( __FILE__ ) . 'lib/functions/general.php' );
@@ -47,56 +51,7 @@ function gsl_add_stylesheet() {
     wp_enqueue_style( 'gsl-style' );
 }
 
-//Template fallback
-add_action('template_redirect', 'gsl_staff_redirect');
-
-function gsl_staff_redirect() {
-    global $wp;
-    $plugindir = dirname( __FILE__ );
-
-    //A Specific Custom Post Type
-    if ($wp->query_vars['post_type'] == 'gslstaff') {
-        $templatefilename = 'single-gslstaff.php';
-        if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
-            $return_template = TEMPLATEPATH . '/' . $templatefilename;
-        } else {
-            $return_template = $plugindir . '/templates/' . $templatefilename;
-        }
-        do_theme_redirect($return_template);
-
-    //A Custom Taxonomy Page
-    } elseif ($wp->query_vars['taxonomy'] == 'gslrole') {
-        $templatefilename = 'taxonomy-gslrole.php';
-        if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
-            $return_template = TEMPLATEPATH . '/' . $templatefilename;
-        } else {
-            $return_template = $plugindir . '/templates/' . $templatefilename;
-        }
-        do_theme_redirect($return_template);
-
-    //A Simple Page
-    } elseif ($wp->query_vars['pagename'] == 'staff') {
-        $templatefilename = 'page-gslstaff.php';
-        if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
-            $return_template = TEMPLATEPATH . '/' . $templatefilename;
-        } else {
-            $return_template = $plugindir . '/templates/' . $templatefilename;
-        }
-        do_theme_redirect($return_template);
-    }
-}
-
-function do_theme_redirect($url) {
-    global $post, $wp_query;
-    if (have_posts()) {
-        include($url);
-        die();
-    } else {
-        $wp_query->is_404 = true;
-    }
-}
-
-function locate_plugin_template($template_names, $load = false, $require_once = true )
+function gsl_locate_plugin_template($template_names, $load = false, $require_once = true )
 {
     if ( !is_array($template_names) )
         return '';
@@ -125,13 +80,14 @@ function locate_plugin_template($template_names, $load = false, $require_once = 
     
     return $located;
 }
-//add_filter( 'taxonomy_template', 'get_custom_taxonomy_template' );
-//add_filter( 'single_template', 'get_custom_single_template' );
-function get_custom_taxonomy_template($template)
+add_filter( 'taxonomy_template', 'gsl_get_custom_taxonomy_template' );
+add_filter( 'single_template', 'gsl_get_custom_single_template' );
+add_filter( 'template_redirect', 'gsl_page_redirect');
+function gsl_get_custom_taxonomy_template($template)
 {
     $taxonomy = get_query_var('taxonomy');
     
-    if ( 'custom_taxonomy_name' == $taxonomy ) {
+    if ( 'gslrole' == $taxonomy ||  'gslexpertise' == $taxonomy ) {
         $term = get_query_var('term');
     
         $templates = array();
@@ -141,21 +97,41 @@ function get_custom_taxonomy_template($template)
                 $templates[] = "taxonomy-$taxonomy.php";
     
         $templates[] = "taxonomy.php";
-        $template = locate_plugin_template($templates);
+        $template = gsl_locate_plugin_template($templates);
     }
-    // return apply_filters('taxonomy_template', $template);
-    return $template;
+     return $template;
 }
-function get_custom_single_template($template)
+function gsl_get_custom_single_template($template)
 {
     global $wp_query;
     $object = $wp_query->get_queried_object();
     
-    if ( 'custom_post_type_name' == $object->post_type ) {
+    if ( 'gslstaff' == $object->post_type ) {
         $templates = array('single-' . $object->post_type . '.php', 'single.php');
-        $template = locate_plugin_template($templates);
+        $template = gsl_locate_plugin_template($templates);
     }
-    // return apply_filters('single_template', $template);
-    return $template;
+     return $template;
 }
+function gsl_page_redirect() {
+	global $wp;
+	$plugindir = dirname( __FILE__ );
+		if ($wp->query_vars["pagename"] == genesis_get_option( 'gsl_staff_page', GSL_SETTINGS_FIELD ) ) {
+        			$templatefilename = 'page-gslstaff.php';
+       			 	if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
+            				$return_template = TEMPLATEPATH . '/' . $templatefilename;
+        				} else {
+            				$return_template = $plugindir . '/templates/' . $templatefilename;
+        				}
+        				do_theme_redirect($return_template);
+		}
+	}
+function do_theme_redirect($url) {
+	global $post, $wp_query;
+		if (have_posts()) {
+			include($url);
+			die();
+		} else {
+			$wp_query->is_404 = true;
+		}
+	}
 ?>

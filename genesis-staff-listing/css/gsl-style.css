@@ -11,6 +11,11 @@
 	font-size: 20px;
 }
 
+.page-content p,
+.single-gslstaff p {
+	padding-bottom: 1em;
+}
+
 .archive-page ul.feedlist li, .entry-content ul.feedlist li {
 	list-style-type: none;
 }
@@ -31,4 +36,16 @@
 
 .picture {
     max-width: 320px;
+}
+
+.profile-image {
+	padding-bottom: 10px;
+}
+
+.alignleft.profile-image {
+	padding-right: 10px;
+}
+
+.alignright.profile-image {
+	padding-left: 10px;
 }

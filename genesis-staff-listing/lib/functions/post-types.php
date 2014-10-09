@@ -43,6 +43,7 @@ function gsl_create_gslstaff_post_type() {
         'labels' => $labels,
         'description' => 'A post type for entering staff information.',
         'public' => true,
+        'menu_icon' => 'dashicons-groups',
         'hierarchical' => false,
         'supports' => array('thumbnail','excerpt'),
         'rewrite' => array('slug' => 'staff'),

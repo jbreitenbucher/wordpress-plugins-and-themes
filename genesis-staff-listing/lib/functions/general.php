@@ -213,30 +213,6 @@ function gsl_tax_filter_posts_per_page( $value ) {
 add_filter( 'option_posts_per_page', 'gsl_tax_filter_posts_per_page' );
 
 /**
- * Customize gslstaff post type icon
- *
- * @author      Jon Breitenbucher <jbreitenbucher@wooster.edu>
- * @version     SVN: $Id$
- * @since       1.0
- *
- */
-
-function gsl_set_gslstaff_icon() {
-    global $post_type;
-    ?>
-    <style>
-    <?php if (($_GET['post_type'] == 'gslstaff') || ($post_type == 'gslstaff')) : ?>
-    #icon-edit { background:transparent url('<?php echo get_bloginfo('url');?>/wp-admin/images/icons32.png') no-repeat -600px -5px; }
-    <?php endif; ?>
- 
-    #adminmenu #menu-posts-gslstaff div.wp-menu-image{background:transparent url('<?php echo get_bloginfo('url');?>/wp-admin/images/menu.png') no-repeat scroll -300px -33px;}
-    #adminmenu #menu-posts-gslstaff:hover div.wp-menu-image,#adminmenu #menu-posts-gslstaff.wp-has-current-submenu div.wp-menu-image{background:transparent url('<?php echo get_bloginfo('url');?>/wp-admin/images/menu.png') no-repeat scroll -300px -1px;}        
-        </style>
-        <?php
-}
-add_action( 'admin_head', 'gsl_set_gslstaff_icon' );
-
-/**
  * Remove support for Title and WYSIWYG editor on gslstaff post type
  *
  * @author      Jon Breitenbucher <jbreitenbucher@wooster.edu>

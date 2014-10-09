@@ -113,9 +113,9 @@ function gsl_get_custom_single_template($template)
      return $template;
 }
 function gsl_page_redirect() {
-	global $wp;
+	$pagename = get_query_var('pagename');
 	$plugindir = dirname( __FILE__ );
-		if ($wp->query_vars["pagename"] == genesis_get_option( 'gsl_staff_page', GSL_SETTINGS_FIELD ) ) {
+		if ($pagename == genesis_get_option( 'gsl_staff_page', GSL_SETTINGS_FIELD ) ) {
         			$templatefilename = 'page-gslstaff.php';
        			 	if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
             				$return_template = TEMPLATEPATH . '/' . $templatefilename;

@@ -117,6 +117,7 @@ function gsl_role_post_content () {
     } else {
         $image_align = 'alignright';
     }
+    $expertise = get_the_term_list($post->ID, 'gslexpertise', '', ', ', '');
     printf( '<div id="post-%s" class="person clear">', get_the_ID() );
         //use the genesis_get_custom_field template tag to display each custom field value
         if (genesis_get_custom_field('gsl_title_text') != '') {
@@ -132,6 +133,13 @@ function gsl_role_post_content () {
                         printf('<span class="email"> | e-mail: <a href="mailto:%s">%s</a></span>', antispambot(genesis_get_custom_field('gsl_email_address_text')), antispambot(genesis_get_custom_field('gsl_email_address_text')) );
                 }
                 echo '</div><!--#end contact-->';
+
+  	  	      if($expertise != ''){
+  	  	            echo '<div class="expertise">';
+  	  		 echo '<h3>Areas of expertise:</h3>';
+  	  		             echo $expertise;
+  	  		  echo '</div><!--#end expertise-->';
+  	  		}
 
                 echo '<div ';
                     post_class('about');

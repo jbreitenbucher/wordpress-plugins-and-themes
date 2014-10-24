@@ -123,13 +123,6 @@ function gsl_archive_post_content () {
                         printf('<span class="email"> | e-mail: <a href="mailto:%s">%s</a></span>', antispambot(genesis_get_custom_field('gsl_email_address_text')), antispambot(genesis_get_custom_field('gsl_email_address_text')) );
                 }
                 echo '</div><!--#end contact-->';
-				
-	      if($expertise != ''){
-	            echo '<div class="expertise">';
-		 echo '<h3>Areas of expertise:</h3>';
-		             echo $expertise;
-		  echo '</div><!--#end expertise-->';
-		}
 
                 echo '<div ';
                     post_class('about');
@@ -142,6 +135,14 @@ function gsl_archive_post_content () {
                     echo genesis_get_image( array( 'size' => 'profile-picture-listing', 'attr' => $default_attr ) );
                     the_excerpt();
                 echo '</div><!--end #about -->';
+				
+	      if($expertise != ''){
+	  	echo '<div class="expertise">';
+	  		echo '<h3>Areas of expertise:</h3>';
+	  			echo $expertise;
+	  		echo '</div><!--#end expertise-->';
+	      }
+		  
             echo '</div><!--end #person -->';
 }
 

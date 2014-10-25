@@ -1,41 +1,42 @@
 .contact {
-        width:350px;
-        padding-bottom:20px;
+    width:350px;
+    padding-bottom:20px;
 }
 
 .person {
-        padding: 20px 0 0 0;
+    padding: 20px 0 0 0;
 }
 
 .name {
-	font-size: 20px;
+    font-size: 20px;
 }
 
 .expertise h3 {
-	font-size: 16px;
+    font-size: 16px;
 }
 
 .page-content p,
 .single-gslstaff p {
-	padding-bottom: 1em;
+    padding-bottom: 1em;
 }
 
-.archive-page ul.feedlist li, .entry-content ul.feedlist li {
-	list-style-type: none;
+.archive-page ul.feedlist li,
+.entry-content ul.feedlist li {
+    list-style-type: none;
 }
 
 .feedlist span.date {
-	font-size: 16px;
-	margin: 0 0 10px;
+    font-size: 16px;
+    margin: 0 0 10px;
 }
 
 .feedlist img {
-	float: left;
-	padding: 0 5px 0 0;
+    float: left;
+    padding: 0 5px 0 0;
 }
 
 .feedlist li h3 {
-	margin: 0 0 3px;
+    margin: 0 0 3px;
 }
 
 .picture {
@@ -43,13 +44,13 @@
 }
 
 .profile-image {
-	padding-bottom: 10px;
+    padding-bottom: 10px;
 }
 
 .alignleft.profile-image {
-	padding-right: 10px;
+    padding-right: 10px;
 }
 
 .alignright.profile-image {
-	padding-left: 10px;
+    padding-left: 10px;
 }

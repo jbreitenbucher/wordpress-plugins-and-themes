@@ -16,7 +16,7 @@
 /**
  * Loop Setup
  *
- * This setup function attaches all of the loop-specific functions 
+ * This setup function attaches all of the loop-specific functions
  * to the correct hooks and filters. All the functions themselves
  * are defined below this setup function.
  *
@@ -28,58 +28,58 @@
 
 add_action('genesis_before','gsl_staff_loop_setup');
 function gsl_staff_loop_setup() {
-    
-	if ( ! genesis_html5() ) {
-	    	// Customize Before Loop
-	    	remove_action('genesis_before_loop','genesis_do_before_loop' );
-	    	add_action('genesis_before_loop','gsl_page_before_loop');
-    
-	   	 // Customize Loop
-	   	 remove_action('genesis_loop', 'genesis_do_loop');
-	   	 add_action('genesis_loop', 'gsl_page_loop');
-    
-	   	 // Remove Post Info
-	   	 remove_action('genesis_before_post_content', 'genesis_post_info');
-    
-	   	 // Customize Post Content
-	   	 remove_action('genesis_post_content','genesis_do_post_content');
-	   	 add_action('genesis_post_content','gsl_page_post_content');
-    
-	   	 // Remove Title, After Title, and Post Image
-	   	 remove_action('genesis_post_title', 'genesis_do_post_title');
-	    	remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
-	    	remove_action('genesis_post_content', 'genesis_do_post_image');
-    
-	   	 // Remove Post Meta
-	    	remove_action('genesis_after_post_content', 'genesis_post_meta');
-	} else {
-    			// Customize Before Loop
-    			remove_action('genesis_before_loop','genesis_do_before_loop' );
-    			add_action('genesis_before_loop','gsl_page_before_loop');
 
-   		// Customize Loop
-   		remove_action('genesis_loop', 'genesis_do_loop');
-   		add_action('genesis_loop', 'gsl_page_loop');
+    if ( ! genesis_html5() ) {
+        // Customize Before Loop
+            remove_action('genesis_before_loop','genesis_do_before_loop' );
+            add_action('genesis_before_loop','gsl_page_before_loop');
 
-   		 // Remove Post Info
-   		  remove_action( 'genesis_entry_header', 'genesis_post_info', 12 );
+        // Customize Loop
+            remove_action('genesis_loop', 'genesis_do_loop');
+            add_action('genesis_loop', 'gsl_page_loop');
 
-   		 // Customize Post Content
- 		remove_action( 'genesis_entry_content', 'genesis_do_post_content' );
- 		add_action( 'genesis_entry_content', 'gsl_page_post_content' );
+        // Remove Post Info
+            remove_action('genesis_before_post_content', 'genesis_post_info');
 
-   		 // Remove Title, After Title, and Post Image
-		 remove_action( 'genesis_entry_header', 'genesis_entry_header_markup_open', 5 );
-		 remove_action( 'genesis_entry_header', 'genesis_entry_header_markup_close', 15 );
-		 remove_action( 'genesis_entry_header', 'genesis_post_info', 12 );
-   		remove_action( 'genesis_entry_header', 'genesis_do_post_title' );
-   		remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
-   	    	remove_action( 'genesis_entry_header', 'genesis_do_post_format_image', 4);
-		remove_action( 'genesis_entry_content', 'genesis_do_post_image', 8);
+        // Customize Post Content
+            remove_action('genesis_post_content','genesis_do_post_content');
+            add_action('genesis_post_content','gsl_page_post_content');
 
-   		// Remove Post Meta
-    			remove_action( 'genesis_entry_footer', 'genesis_post_meta' );	
-	}
+        // Remove Title, After Title, and Post Image
+            remove_action('genesis_post_title', 'genesis_do_post_title');
+            remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
+            remove_action('genesis_post_content', 'genesis_do_post_image');
+
+        // Remove Post Meta
+            remove_action('genesis_after_post_content', 'genesis_post_meta');
+    } else {
+        // Customize Before Loop
+            remove_action('genesis_before_loop','genesis_do_before_loop' );
+            add_action('genesis_before_loop','gsl_page_before_loop');
+
+        // Customize Loop
+            remove_action('genesis_loop', 'genesis_do_loop');
+            add_action('genesis_loop', 'gsl_page_loop');
+
+        // Remove Post Info
+            remove_action( 'genesis_entry_header', 'genesis_post_info', 12 );
+
+        // Customize Post Content
+            remove_action( 'genesis_entry_content', 'genesis_do_post_content' );
+            add_action( 'genesis_entry_content', 'gsl_page_post_content' );
+
+        // Remove Title, After Title, and Post Image
+            remove_action( 'genesis_entry_header', 'genesis_entry_header_markup_open', 5 );
+            remove_action( 'genesis_entry_header', 'genesis_entry_header_markup_close', 15 );
+            remove_action( 'genesis_entry_header', 'genesis_post_info', 12 );
+            remove_action( 'genesis_entry_header', 'genesis_do_post_title' );
+            remove_action('genesis_after_post_title', 'genesis_do_after_post_title');
+            remove_action( 'genesis_entry_header', 'genesis_do_post_format_image', 4);
+            remove_action( 'genesis_entry_content', 'genesis_do_post_image', 8);
+
+        // Remove Post Meta
+            remove_action( 'genesis_entry_footer', 'genesis_post_meta' );
+    }
 }
 
 /**
@@ -159,14 +159,14 @@ function gsl_page_post_content () {
             printf( '<h1 class="name"><a href="%s" title="%s">%s</a></h1>', get_permalink(), the_title_attribute('echo=0'), get_the_title() );
         }
                 echo '<div class="contact clear">';
-                    if( genesis_get_custom_field('gsl_phone_number_text') != '') { 
+                    if( genesis_get_custom_field('gsl_phone_number_text') != '') {
                         printf( '<span class="phone">phone: %s</span>', genesis_get_custom_field('gsl_phone_number_text') );
                     }
                     if( genesis_get_custom_field('gsl_email_address_text') != '') {
                         printf('<span class="email"> | e-mail: <a href="mailto:%s">%s</a></span>', antispambot(genesis_get_custom_field('gsl_email_address_text')), antispambot(genesis_get_custom_field('gsl_email_address_text')) );
                 }
                 echo '</div><!--#end contact-->';
-			
+
                 echo '<div ';
                     post_class('about');
                 echo '>';
@@ -178,15 +178,15 @@ function gsl_page_post_content () {
                     echo '<div class="picture ' . $image_align . '">' . genesis_get_image( array( 'size' => 'profile-picture-listing', 'attr' => $default_attr ) ) . '</div>';
                     the_excerpt();
                 echo '</div><!--end #about -->';
-				
-	  	      if($expertise != ''){
-	  	  	echo '<div class="expertise">';
-	  	  		echo '<h3>Areas of expertise:</h3>';
-	  	  			echo $expertise;
-	  	  		echo '</div><!--#end expertise-->';
-	  	      }
-				
-            echo '</div><!--end #person -->';
+
+            if($expertise != ''){
+                echo '<div class="expertise clear">';
+                    echo '<h3>Areas of expertise:</h3>';
+                    echo $expertise;
+                echo '</div><!--#end expertise-->';
+            }
+
+    echo '</div><!--end #person -->';
 }
 
 genesis();

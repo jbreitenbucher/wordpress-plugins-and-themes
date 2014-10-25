@@ -91,24 +91,24 @@ function gsl_create_metaboxes( $meta_boxes ) {
                 'desc' => '',
                 'id' => $prefix . 'role_taxonomy_select',
                 'taxonomy' => 'gslrole', //Enter Taxonomy Slug
-                'type' => 'taxonomy_select',    
+                'type' => 'taxonomy_select',
             ),
-	array(
-		'name' => 'Areas of Expertise',
-		'desc' => 'What are your areas of expertise?',
-		'id' => $prefix . 'expertise_taxonomy_multicheck',
-		'taxonomy' => 'gslexpertise', //Enter Taxonomy Slug
-		'type' => 'taxonomy_multicheck',	
-	),
+    array(
+        'name' => 'Areas of Expertise',
+        'desc' => 'What are your areas of expertise?',
+        'id' => $prefix . 'expertise_taxonomy_multicheck',
+        'taxonomy' => 'gslexpertise', //Enter Taxonomy Slug
+        'type' => 'taxonomy_multicheck',
+    ),
         ),
     );
-    
+
     return $meta_boxes;
 }
 
 add_filter( 'cmb_meta_boxes' , 'gsl_create_metaboxes' );
- 
- 
+
+
 /**
  * Initialize Metabox Class
  * see /lib/metabox/example-functions.php for more information

@@ -55,11 +55,11 @@ function gsl_locate_plugin_template($template_names, $load = false, $require_onc
 {
     if ( !is_array($template_names) )
         return '';
-    
+
     $located = '';
-    
+
     $this_plugin_dir = WP_PLUGIN_DIR.'/'.str_replace( basename( __FILE__), "", plugin_basename(__FILE__) );
-    
+
     foreach ( $template_names as $template_name ) {
         if ( !$template_name )
             continue;
@@ -74,10 +74,10 @@ function gsl_locate_plugin_template($template_names, $load = false, $require_onc
             break;
         }
     }
-    
+
     if ( $load && '' != $located )
         load_template( $located, $require_once );
-    
+
     return $located;
 }
 add_filter( 'taxonomy_template', 'gsl_get_custom_taxonomy_template' );
@@ -86,16 +86,16 @@ add_filter( 'template_redirect', 'gsl_page_redirect');
 function gsl_get_custom_taxonomy_template($template)
 {
     $taxonomy = get_query_var('taxonomy');
-    
+
     if ( 'gslrole' == $taxonomy ||  'gslexpertise' == $taxonomy ) {
         $term = get_query_var('term');
-    
+
         $templates = array();
         if ( $taxonomy && $term )
                 $templates[] = "taxonomy-$taxonomy-$term.php";
         if ( $taxonomy )
                 $templates[] = "taxonomy-$taxonomy.php";
-    
+
         $templates[] = "taxonomy.php";
         $template = gsl_locate_plugin_template($templates);
     }
@@ -105,7 +105,7 @@ function gsl_get_custom_single_template($template)
 {
     global $wp_query;
     $object = $wp_query->get_queried_object();
-    
+
     if ( 'gslstaff' == $object->post_type ) {
         $templates = array('single-' . $object->post_type . '.php', 'single.php');
         $template = gsl_locate_plugin_template($templates);
@@ -113,25 +113,25 @@ function gsl_get_custom_single_template($template)
      return $template;
 }
 function gsl_page_redirect() {
-	$pagename = get_query_var('pagename');
-	$plugindir = dirname( __FILE__ );
-		if ($pagename == genesis_get_option( 'gsl_staff_page', GSL_SETTINGS_FIELD ) ) {
-        			$templatefilename = 'page-gslstaff.php';
-       			 	if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
-            				$return_template = TEMPLATEPATH . '/' . $templatefilename;
-        				} else {
-            				$return_template = $plugindir . '/templates/' . $templatefilename;
-        				}
-        				do_theme_redirect($return_template);
-		}
-	}
+    $pagename = get_query_var('pagename');
+    $plugindir = dirname( __FILE__ );
+        if ($pagename == genesis_get_option( 'gsl_staff_page', GSL_SETTINGS_FIELD ) ) {
+            $templatefilename = 'page-gslstaff.php';
+                if (file_exists(TEMPLATEPATH . '/' . $templatefilename)) {
+                    $return_template = TEMPLATEPATH . '/' . $templatefilename;
+                } else {
+                    $return_template = $plugindir . '/templates/' . $templatefilename;
+                }
+                    do_theme_redirect($return_template);
+        }
+    }
 function do_theme_redirect($url) {
-	global $post, $wp_query;
-		if (have_posts()) {
-			include($url);
-			die();
-		} else {
-			$wp_query->is_404 = true;
-		}
-	}
+    global $post, $wp_query;
+        if (have_posts()) {
+            include($url);
+            die();
+        } else {
+            $wp_query->is_404 = true;
+        }
+    }
 ?>

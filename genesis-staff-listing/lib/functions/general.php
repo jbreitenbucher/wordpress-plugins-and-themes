@@ -46,12 +46,12 @@ function gsl_gslstaff_columns($defaults) {
  * @since       2.0
  *
  */
- 
+
 function gsl_manage_gslstaff_columns( $column_name, $post_id ) {
     $taxonomy = $column_name;
     $post_type = get_post_type($post_id);
     $terms = get_the_terms($post_id, $taxonomy);
- 
+
     if ( !empty($terms) ) {
         foreach ( $terms as $term )
             $post_terms[] = "<a href='edit.php?post_type={$post_type}&{$taxonomy}={$term->slug}'> " . esc_html(sanitize_term_field('name', $term->name, $term->term_id, $taxonomy, 'edit')) . "</a>";
@@ -70,7 +70,7 @@ function gsl_manage_gslstaff_columns( $column_name, $post_id ) {
  * @since       2.0
  *
  */
- 
+
 function gsl_gslstaff_sortable_columns( $columns ) {
 
     $columns['title'] = 'title';
@@ -87,7 +87,7 @@ function gsl_gslstaff_sortable_columns( $columns ) {
  * @since       2.0
  *
  */
- 
+
 function gsl_name_column_orderby( $query ) {
     if( is_admin() ) {
         if (isset($query->query_vars['post_type'])) {
@@ -136,13 +136,13 @@ function gsl_taxonomy_filter_restrict_manage_posts() {
             $tax_obj = get_taxonomy( $tax_slug );
             wp_dropdown_categories( array(
                 'show_option_all' => __('Show All '.$tax_obj->label ),
-                'taxonomy' 	  => $tax_slug,
-                'name' 		  => $tax_obj->name,
-                'orderby' 	  => 'name',
-                'selected' 	  => $_GET[$tax_slug],
-                'hierarchical' 	  => $tax_obj->hierarchical,
-                'show_count' 	  => false,
-                'hide_empty' 	  => true
+                'taxonomy'      => $tax_slug,
+                'name'          => $tax_obj->name,
+                'orderby'       => 'name',
+                'selected'      => $_GET[$tax_slug],
+                'hierarchical'  => $tax_obj->hierarchical,
+                'show_count'    => false,
+                'hide_empty'    => true
             ) );
         }
     }

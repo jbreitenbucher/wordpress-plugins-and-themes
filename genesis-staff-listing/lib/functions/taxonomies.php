@@ -33,7 +33,7 @@ function gsl_create_role_taxonomy(){
         'all_items' => __( 'All Roles' ),
         'parent_item' => null,
         'parent_item_colon' => null,
-        'edit_item' => __( 'Edit Role' ), 
+        'edit_item' => __( 'Edit Role' ),
         'update_item' => __( 'Update Role' ),
         'add_new_item' => __( 'Add New Role' ),
         'new_item_name' => __( 'New Role Name' ),
@@ -43,47 +43,47 @@ function gsl_create_role_taxonomy(){
         'menu_name' => __( 'Role' ),
     );
 
-    register_taxonomy(  
-        'gslrole',  
-        'gslstaff',  
-        array(  
-            'hierarchical' => false,  
-            'labels' => $labels,  
-            'query_var' => true,  
+    register_taxonomy(
+        'gslrole',
+        'gslstaff',
+        array(
+            'hierarchical' => false,
+            'labels' => $labels,
+            'query_var' => true,
             'rewrite' => array( 'slug' => 'role', 'with_front' => false ),
-        )  
+        )
     );
 }
 add_action( 'init', 'gsl_create_role_taxonomy', 0 );
 
 function gsl_create_expertise_taxonomy(){
-	$labels = array(
-		'name' => _x( 'Areas of Expertise', 'taxonomy general name' ),
-		'singular_name' => _x( 'Expertise', 'taxonomy singular name' ),
-		'search_items' =>  __( 'Search Areas of Expertise' ),
-		'popular_items' => __( 'Popular Areas of Expertise' ),
-		'all_items' => __( 'All Areas of Expertise' ),
-		'parent_item' => null,
-		'parent_item_colon' => null,
-		'edit_item' => __( 'Edit Expertise' ), 
-		'update_item' => __( 'Update Expertise' ),
-		'add_new_item' => __( 'Add New Expertise' ),
-		'new_item_name' => __( 'New Expertise Name' ),
-		'separate_items_with_commas' => __( 'Separate areas of expertise with commas' ),
-		'add_or_remove_items' => __( 'Add or remove areas of expertise' ),
-		'choose_from_most_used' => __( 'Choose from the most used areas of expertise' ),
-		'menu_name' => __( 'Expertise' ),
-	);
+    $labels = array(
+        'name' => _x( 'Areas of Expertise', 'taxonomy general name' ),
+        'singular_name' => _x( 'Expertise', 'taxonomy singular name' ),
+        'search_items' =>  __( 'Search Areas of Expertise' ),
+        'popular_items' => __( 'Popular Areas of Expertise' ),
+        'all_items' => __( 'All Areas of Expertise' ),
+        'parent_item' => null,
+        'parent_item_colon' => null,
+        'edit_item' => __( 'Edit Expertise' ),
+        'update_item' => __( 'Update Expertise' ),
+        'add_new_item' => __( 'Add New Expertise' ),
+        'new_item_name' => __( 'New Expertise Name' ),
+        'separate_items_with_commas' => __( 'Separate areas of expertise with commas' ),
+        'add_or_remove_items' => __( 'Add or remove areas of expertise' ),
+        'choose_from_most_used' => __( 'Choose from the most used areas of expertise' ),
+        'menu_name' => __( 'Expertise' ),
+    );
 
-	register_taxonomy(	
-		'gslexpertise',  
-		'gslstaff',	 
-		array(	
-			'hierarchical' => false,  
-			'labels' => $labels,  
-			'query_var' => true,  
-			'rewrite' => array( 'slug' => 'expertise', 'with_front' => false ),
-		)  
-	);
+    register_taxonomy(
+        'gslexpertise',
+        'gslstaff',
+        array(
+            'hierarchical' => false,
+            'labels' => $labels,
+            'query_var' => true,
+            'rewrite' => array( 'slug' => 'expertise', 'with_front' => false ),
+        )
+    );
 }
 add_action( 'init', 'gsl_create_expertise_taxonomy', 0 );

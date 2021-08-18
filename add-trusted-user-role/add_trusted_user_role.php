@@ -13,42 +13,36 @@ License URI: http://www.opensource.org/licenses/gpl-license.php
 */
 
 /**
- * Add a Trusted Editor role with the exact capabilities of the editor role that will be
+ * Add a Trusted Editor and Trusted Administrator roles with the exact capabilities of the editor and administrator roles that will be
  * able to use unfiltered HTML in a multisite where it has been allowed.
  *
  * @uses add_role()
  */
 
-add_role( 'trusted_editor', 'Trusted Editor',
-	array( 
-		'delete_others_pages' => true,
-		'delete_others_posts' => true,
-		'delete_pages' => true,
-		'delete_posts' => true,
-		'delete_private_pages' => true,
-		'delete_private_posts' => true,
-		'delete_published_pages' => true,
-		'delete_published_posts' => true,
-		'edit_others_pages' => true,
-		'edit_others_posts' => true,
-		'edit_pages' => true,
-		'edit_posts' => true,
-		'edit_private_pages' => true,
-		'edit_private_posts' => true,
-		'edit_published_pages' => true,
-		'edit_published_posts' => true,
-		'manage_categories' => true,
-		'manage_links' => true,
-		'moderate_comments' => true,
-		'publish_pages' => true,
-		'publish_posts' => true,
-		'read' => true,
-		'read_private_pages' => true,
-		'read_private_posts' => true,
-		'unfiltered_html' => true,
-		'upload_files' => true
-	)
-);
+function wooster_roles(){
+
+	add_role( 'trusted_editor', 'Trusted Editor', get_role( 'editor' )->capabilities );
+	add_role( 'trusted_administrator', 'Trusted Administrator', get_role( 'administrator' )->capabilities );
+}
+add_action( 'init', 'wooster_roles' );
+
+/**
+ * Don't let editors or administrators use unfiltered HTML in a multisite where it has been allowed.
+ *
+ *
+ * You should call the function when your plugin is activated.
+ *
+ * @uses $wp_roles
+ * @uses WP_Roles::remove_cap()
+ */
+function wooster_remove_unfiltered_html(){
+ 
+    // $wp_roles is an instance of WP_Roles.
+    global $wp_roles;
+    $wp_roles->remove_cap( 'editor', 'unfiltered_html' );
+    $wp_roles->remove_cap( 'administrator', 'unfiltered_html' );
+}
+add_action( 'init', 'wooster_remove_unfiltered_html' );
 
 /**
  * Don't let editors use unfiltered HTML in a multisite where it has been allowed.
@@ -61,7 +55,7 @@ function remove_editor_unfiltered_html() {
     $role = get_role( 'editor' );
     $role->remove_cap( 'unfiltered_html' );
 }
-add_action( 'init', 'remove_editor_unfiltered_html' );
+//add_action( 'init', 'remove_editor_unfiltered_html' );
 
 /**
  * Enable unfiltered_html capability for Editors.
@@ -71,9 +65,9 @@ add_action( 'init', 'remove_editor_unfiltered_html' );
  * @param  int    $user_id The user ID.
  * @return array  $caps    The user's capabilities, with 'unfiltered_html' potentially added.
  */
-function jb_add_unfiltered_html_capability_to_editors( $caps, $cap, $user_id ) {
+function wooster_add_unfiltered_html_capability( $caps, $cap, $user_id ) {
 
-	if ( 'unfiltered_html' === $cap && user_can( $user_id, 'trusted_editor' ) ) {
+	if ( 'unfiltered_html' === $cap && (user_can( $user_id, 'trusted_editor' ) || user_can( $user_id, 'trusted_administrator' )) ) {
 
 		$caps = array( 'unfiltered_html' );
 
@@ -81,5 +75,5 @@ function jb_add_unfiltered_html_capability_to_editors( $caps, $cap, $user_id ) {
 
 	return $caps;
 }
-add_filter( 'map_meta_cap', 'jb_add_unfiltered_html_capability_to_editors', 1, 3 );
+add_filter( 'map_meta_cap', 'wooster_add_unfiltered_html_capability', 1, 3 );
 ?>

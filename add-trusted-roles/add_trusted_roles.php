@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: Add Trusted Editor Role
+Plugin Name: Add Trusted Roles
 Plugin URI: https://technology.wooster.edu
-Description: This plugin will add a new Trusted User role to WordPress. This role will have all the capabilities of the Editot role but with the additional ability to use unfiltered_html in a Miltisite installation. This role can also be used by other plugins to restrict the viewing of content.
+Description: This plugin will add a Trusted Editor and Trusted Administrator role to WordPress. It will allow these roles to use unfiltered HTML in a multisite installation and remove the capability from the Editor and Administrator roles to do so. Otherwise, the Trusted Editor and Trusted Administrator roles have the same capabilities as the Editor and Administrator roles.
 Author: Jon Breitenbucher
 Author URI: http://jon.breitenbucher.net
 
@@ -13,8 +13,7 @@ License URI: http://www.opensource.org/licenses/gpl-license.php
 */
 
 /**
- * Add a Trusted Editor and Trusted Administrator roles with the exact capabilities of the editor and administrator roles that will be
- * able to use unfiltered HTML in a multisite where it has been allowed.
+ * Add Trusted Editor and Trusted Administrator roles with the exact capabilities of the Editor and Administrator roles.
  *
  * @uses add_role()
  */
@@ -29,9 +28,6 @@ add_action( 'init', 'wooster_roles' );
 /**
  * Don't let editors or administrators use unfiltered HTML in a multisite where it has been allowed.
  *
- *
- * You should call the function when your plugin is activated.
- *
  * @uses $wp_roles
  * @uses WP_Roles::remove_cap()
  */
@@ -45,20 +41,7 @@ function wooster_remove_unfiltered_html(){
 add_action( 'init', 'wooster_remove_unfiltered_html' );
 
 /**
- * Don't let editors use unfiltered HTML in a multisite where it has been allowed.
- *
- * @uses WP_Role::remove_cap()
- */
-function remove_editor_unfiltered_html() {
- 
-    // get_role returns an instance of WP_Role.
-    $role = get_role( 'editor' );
-    $role->remove_cap( 'unfiltered_html' );
-}
-//add_action( 'init', 'remove_editor_unfiltered_html' );
-
-/**
- * Enable unfiltered_html capability for Editors.
+ * Enable unfiltered_html capability for Trusted Editors and Trusted Administrators in a multisite installation.
  *
  * @param  array  $caps    The user's capabilities.
  * @param  string $cap     Capability name.

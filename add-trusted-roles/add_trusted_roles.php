@@ -13,7 +13,8 @@ License URI: http://www.opensource.org/licenses/gpl-license.php
 */
 
 /**
- * Add Trusted Editor and Trusted Administrator roles with the exact capabilities of the Editor and Administrator roles.
+ * Add Trusted Editor and Trusted Administrator roles with the exact capabilities of
+ * the Editor and Administrator roles.
  *
  * @uses add_role()
  */
@@ -26,7 +27,8 @@ function wooster_roles(){
 add_action( 'init', 'wooster_roles' );
 
 /**
- * Don't let editors or administrators use unfiltered HTML in a multisite where it has been allowed.
+ * Don't let editors or administrators use unfiltered HTML in a multisite where it has
+ * been allowed.
  *
  * @uses $wp_roles
  * @uses WP_Roles::remove_cap()
@@ -41,7 +43,8 @@ function wooster_remove_unfiltered_html(){
 add_action( 'init', 'wooster_remove_unfiltered_html' );
 
 /**
- * Enable unfiltered_html capability for Trusted Editors and Trusted Administrators in a multisite installation.
+ * Enable unfiltered_html capability for Trusted Editors and Trusted Administrators in
+ * a multisite installation.
  *
  * @param  array  $caps    The user's capabilities.
  * @param  string $cap     Capability name.

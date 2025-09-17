@@ -1,0 +1,16 @@
+{
+  "apiVersion": 3,
+  "name": "ibp/accordion",
+  "title": "Accordion",
+  "category": "inside-content",
+  "icon": "list-view",
+  "description": "Accordion wrapper. Add Accordion Sections inside.",
+  "keywords": ["faq", "accordion", "disclosure"],
+  "supports": {
+    "html": false,
+    "spacing": { "margin": true, "padding": true },
+    "anchor": true,
+    "className": true
+  },
+  "textdomain": "inside-block-patterns"
+}

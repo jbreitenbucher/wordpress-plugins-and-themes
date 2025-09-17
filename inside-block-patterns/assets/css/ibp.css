@@ -1,0 +1,19 @@
+
+/* Utility classes for intrinsic, fluid layouts */
+.ibp-container { max-width: min(1200px, 92vw); margin-inline: auto; padding: clamp(12px, 2vw, 32px); }
+.ibp-quicklinks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(12px, 2vw, 20px); }
+.ibp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: clamp(12px, 2vw, 24px); }
+.ibp-aside { display: grid; grid-template-columns: 280px 1fr; gap: clamp(16px, 2vw, 28px); }
+@media (max-width: 900px){ .ibp-aside { grid-template-columns: 1fr; } }
+.ibp-muted { background: var(--wp--preset--color--base-2, #f6f6f6); border: 1px solid rgba(0,0,0,.06); border-radius: 8px; padding: clamp(12px, 2vw, 20px); }
+.ibp-alert { border-radius: 8px; padding: 16px; border: 1px solid currentColor; }
+.ibp-alert--info { color: #0a4; }
+.ibp-alert--warn { color: #a60; }
+.ibp-alert--danger { color: #a00; }
+.ibp-toc ul { list-style: none; padding-left: 0; }
+.ibp-toc li { margin: .25rem 0; }
+/* Accordion base styles */
+/*.ibp-accordion__item{border-bottom:1px solid rgba(0,0,0,.08);padding:.25rem 0}
+.ibp-accordion__button{display:block;width:100%;text-align:left;background:transparent;border:0;padding:.6rem 0;font:inherit;cursor:pointer}
+.ibp-accordion__item.is-open>.ibp-accordion__button{font-weight:600}
+.ibp-accordion__panel{padding:.25rem 0 .75rem}*/

@@ -1,0 +1,16 @@
+{
+  "apiVersion": 3,
+  "name": "ibp/accordion-item",
+  "title": "Accordion Section",
+  "parent": ["ibp/accordion"],
+  "category": "inside-content",
+  "icon": "index-card",
+  "description": "Section with an H3 heading and a collapsible panel.",
+  "attributes": {
+    "title": { "type": "string", "source": "text", "selector": "button.ibp-accordion__button .ibp-accordion__label" },
+    "open": { "type": "boolean", "default": false },
+    "uid": { "type": "string" }
+  },
+  "supports": { "html": false, "className": true },
+  "textdomain": "inside-block-patterns"
+}

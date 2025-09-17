@@ -10,7 +10,7 @@
  */
 ?>
 
-<!-- wp:group {"metadata":{"categories":["ibp-content"],"patternName":"inside-block-patterns/mixed-media-article","name":"Mixed media article (gallery + wrapped images + text)"},"className":"ibp-container","layout":{"type":"constrained"}} -->
+<!-- wp:group {"className":"ibp-container","layout":{"type":"constrained"}} -->
 <div class="wp-block-group ibp-container">
 
 	<!-- wp:gallery {"columns":3,"linkTo":"none"} -->
@@ -46,9 +46,9 @@
 	<p>Another paragraph to provide context, link to resources, or set expectations.</p>
 	<!-- /wp:paragraph -->
 
-	<!-- wp:image {"sizeSlug":"medium","linkDestination":"none","align":"left"} -->
-	<figure class="wp-block-image alignleft size-medium">
-		<img src="https://upload.wikimedia.org/wikipedia/commons/c/c8/Library_Interior_%285604862859%29.jpg" alt="Vasconcelos Library interior, Mexico City" />
+	<!-- wp:image {"linkDestination":"none","align":"left","sizeSlug":"medium","width":320} -->
+	<figure class="wp-block-image alignleft size-medium is-resized">
+		<img src="https://upload.wikimedia.org/wikipedia/commons/c/c8/Library_Interior_%285604862859%29.jpg" alt="Vasconcelos Library interior, Mexico City" width="320" />
 		<figcaption>Francisco Anzola, <a href="https://creativecommons.org/licenses/by/2.0" target="_blank" rel="noopener">CC BY 2.0</a>, via Flickr/Openverse</figcaption>
 	</figure>
 	<!-- /wp:image -->
@@ -61,10 +61,10 @@
 	<p>A second paragraph to demonstrate wrapping behavior on wider screens. On narrow screens the image stacks above.</p>
 	<!-- /wp:paragraph -->
 
-	<!-- wp:image {"sizeSlug":"medium","linkDestination":"none","align":"right"} -->
-	<figure class="wp-block-image alignright size-medium">
-		<img src="https://upload.wikimedia.org/wikipedia/commons/e/ea/San_Francisco_city_skyline.jpg" alt="San Francisco skyline from Salesforce Tower" />
-		<figcaption>Lisafern, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a>, via Openverse</figcaption>
+	<!-- wp:image {"linkDestination":"none","align":"right","sizeSlug":"medium","width":300} -->
+	<figure class="wp-block-image alignright size-medium is-resized">
+		<img src="https://upload.wikimedia.org/wikipedia/commons/e/ea/San_Francisco_city_skyline.jpg" alt="San Francisco skyline" width="300" />
+		<figcaption>Lisafern, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a>, via Wikimedia/Openverse</figcaption>
 	</figure>
 	<!-- /wp:image -->
 

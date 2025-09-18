@@ -106,12 +106,28 @@ add_action( 'init', function() {
 
 /**
  * Block category for our custom blocks (Blocks UI, not Patterns)
+ * Make sure the slug matches the one used in block.json ("ibp-content").
  */
 add_filter( 'block_categories_all', function( $categories, $post ) {
-	$categories[] = array(
-		'slug'  => 'inside-content',
-		'title' => __( 'Inside Blocks', 'inside-block-patterns' ),
-	);
+	$slug  = 'ibp-content';
+	$title = __( 'Inside Blocks', 'inside-block-patterns' );
+
+	$found = false;
+	foreach ( $categories as &$cat ) {
+		if ( ! empty( $cat['slug'] ) && $cat['slug'] === $slug ) {
+			$cat['title'] = $title; // enforce our label if the slug already exists
+			$found = true;
+			break;
+		}
+	}
+
+	if ( ! $found ) {
+		$categories[] = array(
+			'slug'  => $slug,
+			'title' => $title,
+		);
+	}
+
 	return $categories;
 }, 10, 2 );
 

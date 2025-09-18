@@ -2,7 +2,7 @@
 /**
  * Title: Section landing: left nav + content + toc
  * Slug: inside-block-patterns/section-landing-leftnav
- * Description: Two-column layout with a left navigation, table of contents, and content with details/FAQ.
+ * Description: Two-column layout with a left navigation (TOC) and content area ending with an FAQ accordion.
  * Categories: ibp-content
  * Block Types: core/group
  * Inserter: true
@@ -22,7 +22,7 @@
 
 		<!-- wp:column -->
 		<div class="wp-block-column">
-			<!-- wp:heading {"level":2} -->
+			<!-- wp:heading -->
 			<h2 class="wp-block-heading" id="overview">Page title</h2>
 			<!-- /wp:heading -->
 
@@ -35,7 +35,11 @@
 			<!-- /wp:heading -->
 
 			<!-- wp:list -->
-			<ul><li>Step one</li><li>Step two</li><li>Step three</li></ul>
+			<ul class="wp-block-list">
+				<li>Step one</li>
+				<li>Step two</li>
+				<li>Step three</li>
+			</ul>
 			<!-- /wp:list -->
 
 			<!-- wp:heading {"level":3} -->
@@ -43,22 +47,16 @@
 			<!-- /wp:heading -->
 
 			<!-- wp:list -->
-			<ul><li><a href="#">Form A</a></li><li><a href="#">Form B</a></li></ul>
+			<ul class="wp-block-list">
+				<li><a href="#">Form A</a></li>
+				<li><a href="#">Form B</a></li>
+			</ul>
 			<!-- /wp:list -->
 
 			<!-- wp:heading {"level":3} -->
 			<h3 class="wp-block-heading" id="faq">FAQ</h3>
 			<!-- /wp:heading -->
-
-			<!-- wp:ibp/accordion -->
-			<!-- wp:ibp/accordion-item {"title":"Question one"} -->
-			<!-- wp:paragraph --><p>Answer.</p><!-- /wp:paragraph -->
-			<!-- /wp:ibp/accordion-item -->
-
-			<!-- wp:ibp/accordion-item {"title":"Question two"} -->
-			<!-- wp:paragraph --><p>Answer.</p><!-- /wp:paragraph -->
-			<!-- /wp:ibp/accordion-item -->
-			<!-- /wp:ibp/accordion -->
+			<!-- wp:pattern {"slug":"inside-block-patterns/faq-accordion"} /-->
 		</div>
 		<!-- /wp:column -->
 	</div>

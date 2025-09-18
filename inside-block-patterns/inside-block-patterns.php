@@ -123,26 +123,27 @@ add_action( 'init', function() {
 	$base = plugin_dir_path( __FILE__ );
 	$url  = plugins_url( '', __FILE__ );
 
-	// Shared style (front + editor) and front-end view script
-	$style_rel = '/blocks/accordion/style.css';
+	// ========== Shared ACCORDION styles/scripts ==========
+	$acc_style_rel = '/blocks/accordion/style.css';
 	wp_register_style(
 		'ibp-accordion-style',
-		$url . $style_rel,
+		$url . $acc_style_rel,
 		array(),
-		file_exists( $base . $style_rel ) ? filemtime( $base . $style_rel ) : null
+		file_exists( $base . $acc_style_rel ) ? filemtime( $base . $acc_style_rel ) : null
 	);
 
-	$view_rel = '/blocks/accordion/view.js';
+	$acc_view_rel = '/blocks/accordion/view.js';
 	wp_register_script(
 		'ibp-accordion-view',
-		$url . $view_rel,
+		$url . $acc_view_rel,
 		array(), // no wp deps needed
-		file_exists( $base . $view_rel ) ? filemtime( $base . $view_rel ) : null,
+		file_exists( $base . $acc_view_rel ) ? filemtime( $base . $acc_view_rel ) : null,
 		true
 	);
 
 	// Editor scripts WITH dependencies so window.wp is guaranteed.
-	$deps = array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n' );
+	// Add wp-data because editor code uses useSelect.
+	$deps = array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'wp-data' );
 
 	$acc_editor_rel = '/blocks/accordion/editor.js';
 	wp_register_script(
@@ -162,9 +163,45 @@ add_action( 'init', function() {
 		true
 	);
 
-	// Register blocks with explicit handles. This overrides any block.json file: entries.
-	$accordion_path     = __DIR__ . '/blocks/accordion';
-	$accordion_item_path = __DIR__ . '/blocks/accordion-item';
+	// ========== TOC styles/scripts ==========
+	$toc_style_rel = '/blocks/toc/style.css';
+	wp_register_style(
+		'ibp-toc-style',
+		$url . $toc_style_rel,
+		array(),
+		file_exists( $base . $toc_style_rel ) ? filemtime( $base . $toc_style_rel ) : null
+	);
+
+	$toc_editor_style_rel = '/blocks/toc/editor.css';
+	wp_register_style(
+		'ibp-toc-editor-style',
+		$url . $toc_editor_style_rel,
+		array(),
+		file_exists( $base . $toc_editor_style_rel ) ? filemtime( $base . $toc_editor_style_rel ) : null
+	);
+
+	$toc_view_rel = '/blocks/toc/view.js';
+	wp_register_script(
+		'ibp-toc-view',
+		$url . $toc_view_rel,
+		array(), // plain DOM enhancer
+		file_exists( $base . $toc_view_rel ) ? filemtime( $base . $toc_view_rel ) : null,
+		true
+	);
+
+	$toc_editor_rel = '/blocks/toc/index.js';
+	wp_register_script(
+		'ibp-toc-editor',
+		$url . $toc_editor_rel,
+		$deps, // uses wp.blocks, wp.blockEditor, wp.data, etc.
+		file_exists( $base . $toc_editor_rel ) ? filemtime( $base . $toc_editor_rel ) : null,
+		true
+	);
+
+	// ========== Register blocks (block.json provides render.php, we override asset handles) ==========
+	$accordion_path       = __DIR__ . '/blocks/accordion';
+	$accordion_item_path  = __DIR__ . '/blocks/accordion-item';
+	$toc_path             = __DIR__ . '/blocks/toc';
 
 	if ( file_exists( trailingslashit( $accordion_path ) . 'block.json' ) ) {
 		register_block_type(
@@ -189,6 +226,20 @@ add_action( 'init', function() {
 		);
 	} else {
 		error_log( 'IBP: missing block.json at ' . $accordion_item_path );
+	}
+
+	if ( file_exists( trailingslashit( $toc_path ) . 'block.json' ) ) {
+		register_block_type(
+			$toc_path,
+			array(
+				'editor_script' => 'ibp-toc-editor',
+				'editor_style'  => 'ibp-toc-editor-style',
+				'style'         => 'ibp-toc-style',
+				'view_script'   => 'ibp-toc-view',
+			)
+		);
+	} else {
+		error_log( 'IBP: missing block.json at ' . $toc_path );
 	}
 } );
 

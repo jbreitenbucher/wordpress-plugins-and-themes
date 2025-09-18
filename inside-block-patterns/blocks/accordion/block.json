@@ -2,7 +2,7 @@
   "apiVersion": 3,
   "name": "ibp/accordion",
   "title": "Accordion",
-  "category": "inside-content",
+  "category": "ibp-content",
   "icon": "list-view",
   "description": "Accordion wrapper. Add Accordion Sections inside.",
   "keywords": ["faq", "accordion", "disclosure"],

@@ -3,7 +3,7 @@
   "name": "ibp/accordion-item",
   "title": "Accordion Section",
   "parent": ["ibp/accordion"],
-  "category": "inside-content",
+  "category": "ibp-content",
   "icon": "index-card",
   "description": "Section with an H3 heading and a collapsible panel.",
   "attributes": {

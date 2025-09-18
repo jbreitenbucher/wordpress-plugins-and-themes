@@ -13,6 +13,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// URLs and paths for assets so patterns can reference images safely.
+if ( ! defined( 'IBP_PLUGIN_URL' ) ) {
+	define( 'IBP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
+if ( ! defined( 'IBP_PLUGIN_PATH' ) ) {
+	define( 'IBP_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
+}
+if ( ! defined( 'IBP_ASSETS_URL' ) ) {
+	define( 'IBP_ASSETS_URL', IBP_PLUGIN_URL . 'assets/' );
+}
+
 /**
  * i18n
  */

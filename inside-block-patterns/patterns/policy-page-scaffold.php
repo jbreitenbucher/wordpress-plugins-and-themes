@@ -11,7 +11,7 @@
 ?>
 
 <!-- wp:group {"className":"ibp-container","layout":{"type":"constrained"}} -->
-<div class="wp-block-group cnbp-container">
+<div class="wp-block-group ibp-container">
 
 <!-- wp:paragraph {"fontSize":"small"} -->
 <p class="has-small-font-size"><strong>Effective date:</strong> YYYY‑MM‑DD · <strong>Owner:</strong> Office name · <strong>Review cycle:</strong> Annually</p>
@@ -58,7 +58,7 @@
 
 <!-- wp:column {"width":"30%"} -->
 <div class="wp-block-column" style="flex-basis:30%"><!-- wp:group {"className":"cnbp-muted"} -->
-<div class="wp-block-group cnbp-muted"><!-- wp:heading {"level":3} -->
+<div class="wp-block-group ibp-muted"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Related</h3>
 <!-- /wp:heading -->
 

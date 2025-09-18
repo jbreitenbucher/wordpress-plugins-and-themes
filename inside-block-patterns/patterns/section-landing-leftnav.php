@@ -53,9 +53,6 @@
 			</ul>
 			<!-- /wp:list -->
 
-			<!-- wp:heading {"level":3} -->
-			<h3 class="wp-block-heading" id="faq">FAQ</h3>
-			<!-- /wp:heading -->
 			<!-- wp:pattern {"slug":"inside-block-patterns/faq-accordion"} /-->
 		</div>
 		<!-- /wp:column -->

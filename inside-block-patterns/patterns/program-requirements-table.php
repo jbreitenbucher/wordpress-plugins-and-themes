@@ -1,17 +1,17 @@
 <?php
 /**
  * Title: Program requirements table
- * Slug: college-network-block-patterns/program-requirements-table
+ * Slug: inside-block-patterns/program-requirements-table
  * Description: Fixed layout table for majors/minors requirements summary.
- * Categories: cnbp-content
+ * Categories: ibp-content
  * Block Types: core/group
  * Inserter: true
  * Version: 1.0.0
  */
 ?>
 
-<!-- wp:group {"className":"cnbp-container","layout":{"type":"constrained"}} -->
-<div class="wp-block-group cnbp-container"><!-- wp:heading {"level":2} -->
+<!-- wp:group {"className":"ibp-container","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ibp-container"><!-- wp:heading {"level":2} -->
 <h2 class="wp-block-heading">Program requirements</h2>
 <!-- /wp:heading -->
 

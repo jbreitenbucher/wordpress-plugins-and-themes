@@ -9,6 +9,10 @@
  */
 ?>
 
+<!-- wp:group {"className":"ibp-container","layout":{"type":"constrained"}} -->
+<!-- wp:heading {"level":2} -->
+<h2 class="wp-block-heading">FAQs</h2>
+<!-- /wp:heading -->
 <!-- wp:ibp/accordion -->
 <div class="wp-block-ibp-accordion ibp-accordion">
 	<!-- wp:ibp/accordion-item {"title":"When are add/drop deadlines?","open":false,"uid":"pat1"} -->
@@ -51,3 +55,4 @@
 	<!-- /wp:ibp/accordion-item -->
 </div>
 <!-- /wp:ibp/accordion -->
+<!-- /wp:group -->

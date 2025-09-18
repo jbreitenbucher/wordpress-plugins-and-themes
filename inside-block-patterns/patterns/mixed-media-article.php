@@ -17,22 +17,22 @@
 	<figure class="wp-block-gallery has-nested-images columns-3 is-cropped">
 		<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
 		<figure class="wp-block-image size-large">
-			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-6.jpg" ); ?>" alt="Mossy forest trunks" />
-			<figcaption>Photo: Jon Sullivan (Public Domain) via Wikimedia Commons</figcaption>
+			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-6.jpg" ); ?>" alt="Black-bellied Whistling-Ducks" />
+			<figcaption>Photo: Jon Breitenbucher</figcaption>
 		</figure>
 		<!-- /wp:image -->
 
 		<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
 		<figure class="wp-block-image size-large">
-			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-2.jpg" ); ?>" alt="Old-growth forest in mist" />
-			<figcaption>Photo: Patte David, USFWS (Public Domain) via Wikimedia Commons</figcaption>
+			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-2.jpg" ); ?>" alt="Fungus on a rotting log" />
+			<figcaption>Photo: Jon Breitenbucher</figcaption>
 		</figure>
 		<!-- /wp:image -->
 
 		<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
 		<figure class="wp-block-image size-large">
-			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-4.jpg" ); ?>" alt="Forest silhouettes with backlight" />
-			<figcaption>Photo: Paolo Neo (Public Domain) via Wikimedia Commons</figcaption>
+			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-4.jpg" ); ?>" alt="Monarch Butterfly on Blazing Star" />
+			<figcaption>Photo: Jon Breitenbucher</figcaption>
 		</figure>
 		<!-- /wp:image -->
 	</figure>
@@ -48,8 +48,8 @@
 
 	<!-- wp:image {"linkDestination":"none","align":"left","sizeSlug":"medium","width":320} -->
 	<figure class="wp-block-image alignleft size-medium is-resized">
-		<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-1.jpg" ); ?>" alt="Vasconcelos Library interior, Mexico City" width="320" />
-		<figcaption>Francisco Anzola, <a href="https://creativecommons.org/licenses/by/2.0" target="_blank" rel="noopener">CC BY 2.0</a>, via Flickr/Openverse</figcaption>
+		<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-1.jpg" ); ?>" alt="Yellow flower" width="320" />
+		<figcaption>Jon Breitenbucher</figcaption>
 	</figure>
 	<!-- /wp:image -->
 
@@ -63,8 +63,8 @@
 
 	<!-- wp:image {"linkDestination":"none","align":"right","sizeSlug":"medium","width":300} -->
 	<figure class="wp-block-image alignright size-medium is-resized">
-		<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-5.jpg" ); ?>" alt="San Francisco skyline" width="300" />
-		<figcaption>Lisafern, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a>, via Wikimedia/Openverse</figcaption>
+		<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-5.jpg" ); ?>" alt="Wild Teasle" width="300" />
+		<figcaption>Jon Breitenbucher</figcaption>
 	</figure>
 	<!-- /wp:image -->
 

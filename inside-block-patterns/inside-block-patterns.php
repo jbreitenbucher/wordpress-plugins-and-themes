@@ -115,129 +115,78 @@ add_filter( 'block_categories_all', function( $categories, $post ) {
 	return $categories;
 }, 10, 2 );
 
-/**
- * Register assets with proper deps and then register blocks using those handles.
- * This avoids "Cannot read properties of undefined (reading 'blocks')" by ensuring wp.* deps are loaded first.
- */
 add_action( 'init', function() {
 	$base = plugin_dir_path( __FILE__ );
 	$url  = plugins_url( '', __FILE__ );
 
-	// ========== Shared ACCORDION styles/scripts ==========
-	$acc_style_rel = '/blocks/accordion/style.css';
-	wp_register_style(
-		'ibp-accordion-style',
-		$url . $acc_style_rel,
-		array(),
-		file_exists( $base . $acc_style_rel ) ? filemtime( $base . $acc_style_rel ) : null
-	);
-
-	$acc_view_rel = '/blocks/accordion/view.js';
-	wp_register_script(
-		'ibp-accordion-view',
-		$url . $acc_view_rel,
-		array(), // no wp deps needed
-		file_exists( $base . $acc_view_rel ) ? filemtime( $base . $acc_view_rel ) : null,
-		true
-	);
-
-	// Editor scripts WITH dependencies so window.wp is guaranteed.
-	// Add wp-data because editor code uses useSelect.
+	// Shared deps for editor scripts that call into window.wp.*
 	$deps = array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'wp-data' );
 
+	/* ========= ACCORDION ========= */
+	$acc_style_rel = '/blocks/accordion/style.css';
+	wp_register_style( 'ibp-accordion-style', $url . $acc_style_rel, array(), file_exists( $base . $acc_style_rel ) ? filemtime( $base . $acc_style_rel ) : null );
+
+	$acc_view_rel = '/blocks/accordion/view.js';
+	wp_register_script( 'ibp-accordion-view', $url . $acc_view_rel, array(), file_exists( $base . $acc_view_rel ) ? filemtime( $base . $acc_view_rel ) : null, true );
+
 	$acc_editor_rel = '/blocks/accordion/editor.js';
-	wp_register_script(
-		'ibp-accordion-editor',
-		$url . $acc_editor_rel,
-		$deps,
-		file_exists( $base . $acc_editor_rel ) ? filemtime( $base . $acc_editor_rel ) : null,
-		true
-	);
+	wp_register_script( 'ibp-accordion-editor', $url . $acc_editor_rel, $deps, file_exists( $base . $acc_editor_rel ) ? filemtime( $base . $acc_editor_rel ) : null, true );
 
 	$item_editor_rel = '/blocks/accordion-item/editor.js';
-	wp_register_script(
-		'ibp-accordion-item-editor',
-		$url . $item_editor_rel,
-		$deps,
-		file_exists( $base . $item_editor_rel ) ? filemtime( $base . $item_editor_rel ) : null,
-		true
-	);
+	wp_register_script( 'ibp-accordion-item-editor', $url . $item_editor_rel, $deps, file_exists( $base . $item_editor_rel ) ? filemtime( $base . $item_editor_rel ) : null, true );
 
-	// ========== TOC styles/scripts ==========
-	$toc_style_rel = '/blocks/toc/style.css';
-	wp_register_style(
-		'ibp-toc-style',
-		$url . $toc_style_rel,
-		array(),
-		file_exists( $base . $toc_style_rel ) ? filemtime( $base . $toc_style_rel ) : null
-	);
-
-	$toc_editor_style_rel = '/blocks/toc/editor.css';
-	wp_register_style(
-		'ibp-toc-editor-style',
-		$url . $toc_editor_style_rel,
-		array(),
-		file_exists( $base . $toc_editor_style_rel ) ? filemtime( $base . $toc_editor_style_rel ) : null
-	);
-
-	$toc_view_rel = '/blocks/toc/view.js';
-	wp_register_script(
-		'ibp-toc-view',
-		$url . $toc_view_rel,
-		array(), // plain DOM enhancer
-		file_exists( $base . $toc_view_rel ) ? filemtime( $base . $toc_view_rel ) : null,
-		true
-	);
-
-	$toc_editor_rel = '/blocks/toc/index.js';
-	wp_register_script(
-		'ibp-toc-editor',
-		$url . $toc_editor_rel,
-		$deps, // uses wp.blocks, wp.blockEditor, wp.data, etc.
-		file_exists( $base . $toc_editor_rel ) ? filemtime( $base . $toc_editor_rel ) : null,
-		true
-	);
-
-	// ========== Register blocks (block.json provides render.php, we override asset handles) ==========
 	$accordion_path       = __DIR__ . '/blocks/accordion';
 	$accordion_item_path  = __DIR__ . '/blocks/accordion-item';
-	$toc_path             = __DIR__ . '/blocks/toc';
 
-	if ( file_exists( trailingslashit( $accordion_path ) . 'block.json' ) ) {
-		register_block_type(
-			$accordion_path,
-			array(
-				'editor_script' => 'ibp-accordion-editor',
-				'style'         => 'ibp-accordion-style',
-				'view_script'   => 'ibp-accordion-view',
-			)
-		);
+	if ( file_exists( $accordion_path . '/block.json' ) ) {
+		register_block_type( $accordion_path, array(
+			'editor_script' => 'ibp-accordion-editor',
+			'style'         => 'ibp-accordion-style',
+			'view_script'   => 'ibp-accordion-view',
+		) );
 	} else {
 		error_log( 'IBP: missing block.json at ' . $accordion_path );
 	}
 
-	if ( file_exists( trailingslashit( $accordion_item_path ) . 'block.json' ) ) {
-		register_block_type(
-			$accordion_item_path,
-			array(
-				'editor_script' => 'ibp-accordion-item-editor',
-				'style'         => 'ibp-accordion-style',
-			)
-		);
+	if ( file_exists( $accordion_item_path . '/block.json' ) ) {
+		register_block_type( $accordion_item_path, array(
+			'editor_script' => 'ibp-accordion-item-editor',
+			'style'         => 'ibp-accordion-style',
+		) );
 	} else {
 		error_log( 'IBP: missing block.json at ' . $accordion_item_path );
 	}
 
-	if ( file_exists( trailingslashit( $toc_path ) . 'block.json' ) ) {
-		register_block_type(
-			$toc_path,
-			array(
-				'editor_script' => 'ibp-toc-editor',
-				'editor_style'  => 'ibp-toc-editor-style',
-				'style'         => 'ibp-toc-style',
-				'view_script'   => 'ibp-toc-view',
-			)
-		);
+	/* ========= TOC ========= */
+	$toc_style_rel        = '/blocks/toc/style.css';
+	$toc_editor_style_rel = '/blocks/toc/editor.css';
+	$toc_view_rel         = '/blocks/toc/view.js';
+	$toc_editor_rel       = '/blocks/toc/index.js';
+
+	wp_register_style(  'ibp-toc-style',        $url . $toc_style_rel,        array(), file_exists( $base . $toc_style_rel ) ? filemtime( $base . $toc_style_rel ) : null );
+	wp_register_style(  'ibp-toc-editor-style', $url . $toc_editor_style_rel, array(), file_exists( $base . $toc_editor_style_rel ) ? filemtime( $base . $toc_editor_style_rel ) : null );
+	wp_register_script( 'ibp-toc-view',         $url . $toc_view_rel,         array(), file_exists( $base . $toc_view_rel ) ? filemtime( $base . $toc_view_rel ) : null, true );
+	wp_register_script( 'ibp-toc-editor',       $url . $toc_editor_rel,       $deps,   file_exists( $base . $toc_editor_rel ) ? filemtime( $base . $toc_editor_rel ) : null, true );
+
+	// Load the render function for the dynamic TOC block and pass it as render_callback.
+	$toc_path = __DIR__ . '/blocks/toc';
+	if ( file_exists( $toc_path . '/block.json' ) ) {
+		$render_php = $toc_path . '/render.php';
+		if ( file_exists( $render_php ) ) {
+			require_once $render_php;
+		}
+		register_block_type( $toc_path, array(
+			'editor_script'  => 'ibp-toc-editor',
+			'editor_style'   => 'ibp-toc-editor-style',
+			'style'          => 'ibp-toc-style',
+			'view_script'    => 'ibp-toc-view',
+			'render_callback'=> function( $attributes, $content, $block ) {
+				if ( function_exists( 'ibp_render_toc_block' ) ) {
+					return ibp_render_toc_block( $attributes, $content );
+				}
+				return '';
+			},
+		) );
 	} else {
 		error_log( 'IBP: missing block.json at ' . $toc_path );
 	}

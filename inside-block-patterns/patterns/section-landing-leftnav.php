@@ -16,7 +16,7 @@
 	<div class="wp-block-columns ibp-aside">
 		<!-- wp:column {"width":"280px"} -->
 		<div class="wp-block-column" style="flex-basis:280px">
-			<!-- wp:inside-block-patterns/toc {"title":"On this page","collapsed":false,"maxDepth":4,"includeH3":true,"includeH4":false,"includeH5":false,"includeH6":false} /-->
+			<!-- wp:ibp/toc {"title":"On this page","collapsed":false,"maxDepth":4,"includeH3":true,"includeH4":false,"includeH5":false,"includeH6":false} /-->
 		</div>
 		<!-- /wp:column -->
 
@@ -50,15 +50,15 @@
 			<h3 class="wp-block-heading" id="faq">FAQ</h3>
 			<!-- /wp:heading -->
 
-			<!-- wp:inside-block-patterns/accordion -->
-			<!-- wp:inside-block-patterns/accordion-item {"title":"Question one"} -->
+			<!-- wp:ibp/accordion -->
+			<!-- wp:ibp/accordion-item {"title":"Question one"} -->
 			<!-- wp:paragraph --><p>Answer.</p><!-- /wp:paragraph -->
-			<!-- /wp:inside-block-patterns/accordion-item -->
+			<!-- /wp:ibp/accordion-item -->
 
-			<!-- wp:inside-block-patterns/accordion-item {"title":"Question two"} -->
+			<!-- wp:ibp/accordion-item {"title":"Question two"} -->
 			<!-- wp:paragraph --><p>Answer.</p><!-- /wp:paragraph -->
-			<!-- /wp:inside-block-patterns/accordion-item -->
-			<!-- /wp:inside-block-patterns/accordion -->
+			<!-- /wp:ibp/accordion-item -->
+			<!-- /wp:ibp/accordion -->
 		</div>
 		<!-- /wp:column -->
 	</div>

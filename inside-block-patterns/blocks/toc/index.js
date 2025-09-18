@@ -37,7 +37,7 @@
 			.slice(0, 80);
 	}
 
-	registerBlockType('inside-block-patterns/toc', {
+	registerBlockType('ibp/toc', {
 		apiVersion: 3,
 		edit(props) {
 			const { attributes, setAttributes } = props;

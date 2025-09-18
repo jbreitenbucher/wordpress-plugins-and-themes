@@ -30,7 +30,7 @@
 			<!-- wp:column {"verticalAlignment":"center","width":"50%"} -->
 			<div class="wp-block-column is-vertically-aligned-center" style="flex-basis:50%">
 				<!-- wp:image {"aspectRatio":"1","scale":"cover","sizeSlug":"full"} -->
-				<figure class="wp-block-image size-full"><img src="https://wordpresscore.breitenbucher.net/wp-content/themes/twentytwentyfive/assets/images/ruins-image.webp" alt="Cliff Palace, Colorado" style="aspect-ratio:1;object-fit:cover"/></figure>
+				<figure class="wp-block-image size-full"><img src="<?php echo esc_url( IBP_ASSETS_URL . "images/hero-placeholder-2.jpg" ); ?>" alt="Ruby-throated Hummingbird" style="aspect-ratio:1;object-fit:cover"/></figure>
 				<!-- /wp:image -->
 			</div>
 			<!-- /wp:column -->
@@ -61,7 +61,7 @@
 			<!-- wp:column {"style":{"spacing":{"padding":{"top":"var:preset|spacing|70"},"blockGap":"0"}}} -->
 			<div class="wp-block-column" style="padding-top:var(--wp--preset--spacing--70)">
 				<!-- wp:image {"sizeSlug":"full","linkDestination":"none"} -->
-				<figure class="wp-block-image size-full"><img src="https://wordpresscore.breitenbucher.net/wp-content/themes/twentytwentyfive/assets/images/ruins-image.webp" alt="Event image"/></figure>
+				<figure class="wp-block-image size-full"><img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-4.jpg" ); ?>" alt="Event image"/></figure>
 				<!-- /wp:image -->
 				<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20","padding":{"top":"var:preset|spacing|30"}}},"layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->
 				<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--30)">
@@ -76,7 +76,7 @@
 			<!-- wp:column {"style":{"spacing":{"padding":{"top":"var:preset|spacing|70"},"blockGap":"0"}}} -->
 			<div class="wp-block-column" style="padding-top:var(--wp--preset--spacing--70)">
 				<!-- wp:image {"sizeSlug":"full","linkDestination":"none"} -->
-				<figure class="wp-block-image size-full"><img src="https://wordpresscore.breitenbucher.net/wp-content/themes/twentytwentyfive/assets/images/ruins-image.webp" alt="Event image"/></figure>
+				<figure class="wp-block-image size-full"><img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-6.jpg" ); ?>" alt="Event image"/></figure>
 				<!-- /wp:image -->
 				<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20","padding":{"top":"var:preset|spacing|30"}}},"layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->
 				<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--30)">
@@ -91,7 +91,7 @@
 			<!-- wp:column {"style":{"spacing":{"padding":{"top":"var:preset|spacing|70"},"blockGap":"0"}}} -->
 			<div class="wp-block-column" style="padding-top:var(--wp--preset--spacing--70)">
 				<!-- wp:image {"sizeSlug":"full","linkDestination":"none"} -->
-				<figure class="wp-block-image size-full"><img src="https://wordpresscore.breitenbucher.net/wp-content/themes/twentytwentyfive/assets/images/ruins-image.webp" alt="Event image"/></figure>
+				<figure class="wp-block-image size-full"><img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-2.jpg" ); ?>" alt="Event image"/></figure>
 				<!-- /wp:image -->
 				<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20","padding":{"top":"var:preset|spacing|30"}}},"layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->
 				<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--30)">

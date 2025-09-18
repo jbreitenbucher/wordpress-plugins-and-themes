@@ -40,7 +40,7 @@
 		<!-- wp:column {"width":"40%"} -->
 		<div class="wp-block-column" style="flex-basis:40%">
 			<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
-			<figure class="wp-block-image size-large"><img alt="Department illustration or photo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/640px-No_image_available.svg.png"/></figure>
+			<figure class="wp-block-image size-large"><img alt="Department illustration or photo" src="<?php echo esc_url( IBP_ASSETS_URL . "images/hero-placeholder-1.jpg" ); ?>"/></figure>
 			<!-- /wp:image -->
 		</div>
 		<!-- /wp:column -->

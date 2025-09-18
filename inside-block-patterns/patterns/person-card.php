@@ -16,7 +16,7 @@
 
     <!-- wp:image {"sizeSlug":"full","linkDestination":"none","width":160,"align":"center"} -->
     <figure class="wp-block-image aligncenter size-full is-resized">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Profile_photo_placeholder_square.svg/512px-Profile_photo_placeholder_square.svg.png" alt="Headshot placeholder" width="160" />
+      <img src="<?php echo esc_url( IBP_ASSETS_URL . "images/avatar-placeholder.png" ); ?>" alt="Headshot placeholder" width="160" />
     </figure>
     <!-- /wp:image -->
 

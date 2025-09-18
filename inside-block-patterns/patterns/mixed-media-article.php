@@ -17,21 +17,21 @@
 	<figure class="wp-block-gallery has-nested-images columns-3 is-cropped">
 		<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
 		<figure class="wp-block-image size-large">
-			<img src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Dark_mossy_forest.jpg" alt="Mossy forest trunks" />
+			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-6.jpg" ); ?>" alt="Mossy forest trunks" />
 			<figcaption>Photo: Jon Sullivan (Public Domain) via Wikimedia Commons</figcaption>
 		</figure>
 		<!-- /wp:image -->
 
 		<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
 		<figure class="wp-block-image size-large">
-			<img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Old_growth_forest_scenic.jpg" alt="Old-growth forest in mist" />
+			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-2.jpg" ); ?>" alt="Old-growth forest in mist" />
 			<figcaption>Photo: Patte David, USFWS (Public Domain) via Wikimedia Commons</figcaption>
 		</figure>
 		<!-- /wp:image -->
 
 		<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->
 		<figure class="wp-block-image size-large">
-			<img src="https://upload.wikimedia.org/wikipedia/commons/8/88/Forest_dark.jpg" alt="Forest silhouettes with backlight" />
+			<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-4.jpg" ); ?>" alt="Forest silhouettes with backlight" />
 			<figcaption>Photo: Paolo Neo (Public Domain) via Wikimedia Commons</figcaption>
 		</figure>
 		<!-- /wp:image -->
@@ -48,7 +48,7 @@
 
 	<!-- wp:image {"linkDestination":"none","align":"left","sizeSlug":"medium","width":320} -->
 	<figure class="wp-block-image alignleft size-medium is-resized">
-		<img src="https://upload.wikimedia.org/wikipedia/commons/c/c8/Library_Interior_%285604862859%29.jpg" alt="Vasconcelos Library interior, Mexico City" width="320" />
+		<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-1.jpg" ); ?>" alt="Vasconcelos Library interior, Mexico City" width="320" />
 		<figcaption>Francisco Anzola, <a href="https://creativecommons.org/licenses/by/2.0" target="_blank" rel="noopener">CC BY 2.0</a>, via Flickr/Openverse</figcaption>
 	</figure>
 	<!-- /wp:image -->
@@ -63,7 +63,7 @@
 
 	<!-- wp:image {"linkDestination":"none","align":"right","sizeSlug":"medium","width":300} -->
 	<figure class="wp-block-image alignright size-medium is-resized">
-		<img src="https://upload.wikimedia.org/wikipedia/commons/e/ea/San_Francisco_city_skyline.jpg" alt="San Francisco skyline" width="300" />
+		<img src="<?php echo esc_url( IBP_ASSETS_URL . "images/image-5.jpg" ); ?>" alt="San Francisco skyline" width="300" />
 		<figcaption>Lisafern, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a>, via Wikimedia/Openverse</figcaption>
 	</figure>
 	<!-- /wp:image -->

@@ -1,8 +1,0 @@
-.ibp-toc {
-  outline: 1px dashed var(--wp-admin-theme-color, #2271b1);
-  background: rgba(34, 113, 177, 0.05);
-}
-.ibp-toc__empty {
-  opacity: 0.8;
-  font-style: italic;
-}

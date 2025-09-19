@@ -1,0 +1,30 @@
+{
+  "apiVersion": 3,
+  "name": "wbp/accordion-item",
+  "title": "Accordion Section",
+  "parent": [
+    "wbp/accordion"
+  ],
+  "category": "wbp-content",
+  "icon": "index-card",
+  "description": "Section with an H3 heading and a collapsible panel.",
+  "attributes": {
+    "title": {
+      "type": "string",
+      "source": "text",
+      "selector": "button.wbp-accordion__button .wbp-accordion__label"
+    },
+    "open": {
+      "type": "boolean",
+      "default": false
+    },
+    "uid": {
+      "type": "string"
+    }
+  },
+  "supports": {
+    "html": false,
+    "className": true
+  },
+  "textdomain": "wooster-block-patterns"
+}

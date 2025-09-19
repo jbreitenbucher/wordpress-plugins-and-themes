@@ -1,0 +1,14 @@
+
+/* Utility classes for intrinsic, fluid layouts */
+.wbp-container { max-width: min(1200px, 92vw); margin-inline: auto; padding: clamp(12px, 2vw, 32px); }
+.wbp-quicklinks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(12px, 2vw, 20px); }
+.wbp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: clamp(12px, 2vw, 24px); }
+.wbp-aside { display: grid; grid-template-columns: 280px 1fr; gap: clamp(16px, 2vw, 28px); }
+@media (max-width: 900px){ .wbp-aside { grid-template-columns: 1fr; } }
+.wbp-muted { background: var(--wp--preset--color--base-2, #f6f6f6); border: 1px solid rgba(0,0,0,.06); border-radius: 8px; padding: clamp(12px, 2vw, 20px); }
+.wbp-alert { border-radius: 8px; padding: 16px; border: 1px solid currentColor; }
+.wbp-alert--info { color: #0a4; }
+.wbp-alert--warn { color: #a60; }
+.wbp-alert--danger { color: #a00; }
+.wbp-toc ul { list-style: none; padding-left: 0; }
+.wbp-toc li { margin: .25rem 0; }

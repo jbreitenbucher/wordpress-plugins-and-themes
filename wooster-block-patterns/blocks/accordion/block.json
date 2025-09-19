@@ -1,0 +1,23 @@
+{
+  "apiVersion": 3,
+  "name": "wbp/accordion",
+  "title": "Accordion",
+  "category": "wbp-content",
+  "icon": "list-view",
+  "description": "Accordion wrapper. Add Accordion Sections inside.",
+  "keywords": [
+    "faq",
+    "accordion",
+    "disclosure"
+  ],
+  "supports": {
+    "html": false,
+    "spacing": {
+      "margin": true,
+      "padding": true
+    },
+    "anchor": true,
+    "className": true
+  },
+  "textdomain": "wooster-block-patterns"
+}

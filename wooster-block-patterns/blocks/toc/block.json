@@ -9,28 +9,15 @@
   "icon": "list-view",
   "supports": {
     "html": false,
-    "anchor": false
+    "anchor": false,
+    "align": [ "wide", "full" ],
+    "color": { "background": true, "text": true },
+    "spacing": { "padding": true, "margin": true }
   },
   "attributes": {
     "title": {
       "type": "string",
       "default": "On this page"
-    },
-    "includeH3": {
-      "type": "boolean",
-      "default": true
-    },
-    "includeH4": {
-      "type": "boolean",
-      "default": false
-    },
-    "includeH5": {
-      "type": "boolean",
-      "default": false
-    },
-    "includeH6": {
-      "type": "boolean",
-      "default": false
     },
     "collapsed": {
       "type": "boolean",
@@ -38,7 +25,7 @@
     },
     "maxDepth": {
       "type": "number",
-      "default": 4
+      "default": 3
     }
   }
 }

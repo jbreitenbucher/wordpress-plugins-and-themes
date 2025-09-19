@@ -1,6 +1,6 @@
 <?php
 /**
- * Server render for TOC block.
+ * Server render for TOC block (H2..H{maxDepth}, no per-level toggles).
  *
  * @param array  $attributes Block attributes.
  * @param string $content    Block content (unused).
@@ -8,38 +8,38 @@
  */
 if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 	function wbp_render_toc_block( $attributes, $content ) {
-		$title      = isset( $attributes['title'] ) ? $attributes['title'] : 'On this page';
-		$include_h3 = ! empty( $attributes['includeH3'] );
-		$include_h4 = ! empty( $attributes['includeH4'] );
-		$include_h5 = ! empty( $attributes['includeH5'] );
-		$include_h6 = ! empty( $attributes['includeH6'] );
-		$collapsed  = ! empty( $attributes['collapsed'] );
-		$max_depth  = isset( $attributes['maxDepth'] ) ? max( 2, min( 6, intval( $attributes['maxDepth'] ) ) ) : 6;
+		$title     = isset( $attributes['title'] ) ? $attributes['title'] : __( 'On this page', 'wooster-block-patterns' );
+		$collapsed = ! empty( $attributes['collapsed'] );
+		$max_depth = isset( $attributes['maxDepth'] ) ? max( 2, min( 6, (int) $attributes['maxDepth'] ) ) : 3;
 
-		global $post;
+		$post = get_post();
 		if ( ! $post ) {
-			return '';
+			$wrapper = get_block_wrapper_attributes( array(
+				'class' => 'wbp-toc' . ( $collapsed ? ' is-collapsed' : '' ),
+			) );
+			return '<nav ' . $wrapper . ' aria-label="' . esc_attr__( 'Table of contents', 'wooster-block-patterns' ) . '"><p class="wbp-toc__empty">' . esc_html__( 'No headings found.', 'wooster-block-patterns' ) . '</p></nav>';
 		}
 
+		// Parse blocks to collect headings in document order.
 		$blocks = parse_blocks( $post->post_content );
 
 		$items = array();
-		$walker = function( $nodes ) use ( &$walker, &$items ) {
-			foreach ( $nodes as $node ) {
+		$walk  = function( $nodes ) use ( &$walk, &$items ) {
+			foreach ( (array) $nodes as $node ) {
 				if ( empty( $node['blockName'] ) ) {
 					continue;
 				}
 				if ( 'core/heading' === $node['blockName'] ) {
-					$attrs = isset( $node['attrs'] ) ? $node['attrs'] : array();
-					$level = isset( $attrs['level'] ) ? intval( $attrs['level'] ) : 2;
+					$attrs  = isset( $node['attrs'] ) ? (array) $node['attrs'] : array();
+					$level  = isset( $attrs['level'] ) ? (int) $attrs['level'] : 2;
+					$anchor = isset( $attrs['anchor'] ) ? (string) $attrs['anchor'] : '';
 
-					$text  = '';
+					$text = '';
 					if ( isset( $attrs['content'] ) && $attrs['content'] ) {
 						$text = wp_strip_all_tags( $attrs['content'] );
 					} elseif ( isset( $node['innerHTML'] ) ) {
 						$text = wp_strip_all_tags( $node['innerHTML'] );
 					}
-					$anchor = isset( $attrs['anchor'] ) ? $attrs['anchor'] : '';
 
 					$items[] = array(
 						'level'  => max( 2, min( 6, $level ) ),
@@ -48,52 +48,50 @@ if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 					);
 				}
 				if ( ! empty( $node['innerBlocks'] ) ) {
-					$walker( $node['innerBlocks'] );
+					$walk( $node['innerBlocks'] );
 				}
 			}
 		};
-		$walker( $blocks );
+		$walk( $blocks );
 
-		// Filter by settings
-		$items = array_values( array_filter( $items, function( $h ) use ( $include_h3, $include_h4, $include_h5, $include_h6, $max_depth ) {
-			if ( $h['level'] > $max_depth ) return false;
-			if ( 2 === $h['level'] ) return true;
-			if ( 3 === $h['level'] ) return $include_h3;
-			if ( 4 === $h['level'] ) return $include_h4;
-			if ( 5 === $h['level'] ) return $include_h5;
-			if ( 6 === $h['level'] ) return $include_h6;
-			return false;
+		// Keep only H2..H{max_depth}
+		$items = array_values( array_filter( $items, function( $h ) use ( $max_depth ) {
+			return ( $h['level'] >= 2 && $h['level'] <= $max_depth );
 		} ) );
 
-		if ( ! $items ) {
-			return '<nav class="wbp-toc" aria-label="' . esc_attr__( 'Table of contents', 'wooster-block-patterns' ) . '"><p class="wbp-toc__empty">' . esc_html__( 'No headings found.', 'wooster-block-patterns' ) . '</p></nav>';
+		if ( empty( $items ) ) {
+			$wrapper = get_block_wrapper_attributes( array(
+				'class' => 'wbp-toc' . ( $collapsed ? ' is-collapsed' : '' ),
+			) );
+			return '<nav ' . $wrapper . ' aria-label="' . esc_attr__( 'Table of contents', 'wooster-block-patterns' ) . '"><p class="wbp-toc__empty">' . esc_html__( 'No headings found.', 'wooster-block-patterns' ) . '</p></nav>';
 		}
 
-		// Assign stable ids
+		// Assign stable unique ids (prefer heading anchor; otherwise slugified text with de-dupe).
 		$slug_counts = array();
 		foreach ( $items as $i => $h ) {
 			if ( ! empty( $h['anchor'] ) ) {
 				$slug = sanitize_title( $h['anchor'] );
 			} else {
 				$base = sanitize_title( $h['text'] );
-				if ( '' === $base ) $base = 'section';
+				if ( '' === $base ) {
+					$base = 'section';
+				}
 				$slug = $base;
-				$k = 2;
+				$k    = 2;
 				while ( isset( $slug_counts[ $slug ] ) ) {
-					$slug = $base . '-' . $k;
-					$k++;
+					$slug = $base . '-' . $k++;
 				}
 			}
 			$slug_counts[ $slug ] = true;
-			$items[ $i ]['id'] = $slug;
+			$items[ $i ]['id']    = $slug;
 		}
 
-		// Build nested ULs
+		// Build nested ULs starting at H2 depth.
 		$base_level = 2;
 		$current    = $base_level;
 		$list_html  = '<ul class="wbp-toc__list level-' . $base_level . '">';
 		foreach ( $items as $h ) {
-			$level = max( $base_level, min( 6, intval( $h['level'] ) ) );
+			$level = max( $base_level, min( 6, (int) $h['level'] ) );
 			while ( $current < $level ) {
 				$list_html .= '<ul class="wbp-toc__list level-' . ( $current + 1 ) . '">';
 				$current++;
@@ -112,21 +110,32 @@ if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 
 		$content_id = 'wbp-toc-' . wp_unique_id();
 
-		$nav_classes = 'wbp-toc' . ( $collapsed ? ' is-collapsed' : '' );
-		$html  = '<nav class="' . esc_attr( $nav_classes ) . '" aria-label="' . esc_attr__( 'Table of contents', 'wooster-block-patterns' ) . '"';
-		$html .= ' data-ids="' . esc_attr( wp_json_encode( wp_list_pluck( $items, 'id' ) ) ) . '"';
-		$html .= ' data-content="' . esc_attr( $content_id ) . '"';
-		$html .= ' data-max-depth="' . esc_attr( $max_depth ) . '"';
-		$html .= '>';
+		$wrapper = get_block_wrapper_attributes( array(
+			'class' => 'wbp-toc' . ( $collapsed ? ' is-collapsed' : '' ),
+		) );
 
-		// Toggle button (always rendered; state via aria-expanded + hidden)
-		$html .= '<button type="button" class="wbp-toc__toggle" aria-controls="' . esc_attr( $content_id ) . '" aria-expanded="' . ( $collapsed ? 'false' : 'true' ) . '">';
-		$html .= esc_html( $title ?: __( 'On this page', 'wooster-block-patterns' ) ) . '<span class="wbp-toc__caret" aria-hidden="true"></span></button>';
+		ob_start();
+		?>
+		<nav <?php echo $wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			aria-label="<?php esc_attr_e( 'Table of contents', 'wooster-block-patterns' ); ?>"
+			data-ids="<?php echo esc_attr( wp_json_encode( wp_list_pluck( $items, 'id' ) ) ); ?>"
+			data-content="<?php echo esc_attr( $content_id ); ?>"
+			data-max-depth="<?php echo esc_attr( $max_depth ); ?>"
+		>
+			<button type="button"
+				class="wbp-toc__toggle"
+				aria-controls="<?php echo esc_attr( $content_id ); ?>"
+				aria-expanded="<?php echo $collapsed ? 'false' : 'true'; ?>">
+				<?php echo esc_html( $title ?: __( 'On this page', 'wooster-block-patterns' ) ); ?>
+				<span class="wbp-toc__caret" aria-hidden="true"></span>
+			</button>
 
-		$html .= '<div id="' . esc_attr( $content_id ) . '" class="wbp-toc__content" ' . ( $collapsed ? 'hidden' : '' ) . '>' . $list_html . '</div>';
-		$html .= '</nav>';
-
-		return $html;
+			<div id="<?php echo esc_attr( $content_id ); ?>" class="wbp-toc__content" <?php echo $collapsed ? 'hidden' : ''; ?>>
+				<?php echo $list_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			</div>
+		</nav>
+		<?php
+		return ob_get_clean();
 	}
 }
 

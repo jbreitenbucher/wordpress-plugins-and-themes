@@ -50,3 +50,8 @@
 
 .wbp-toc a { text-decoration: none; }
 .wbp-toc a:hover, .wbp-toc a:focus { text-decoration: underline; }
+
+.wbp-toc .wbp-toc__nav { margin-top: .5rem; }
+.wbp-toc .wbp-toc__list { list-style: none; padding-left: 1rem; margin: .25rem 0; }
+.wbp-toc .wbp-toc__item a { text-decoration: none; }
+.wbp-toc.is-collapsed .wbp-toc__nav { display: none; }

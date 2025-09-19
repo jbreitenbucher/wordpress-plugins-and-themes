@@ -1,6 +1,7 @@
+/* global window */
 (function (wp) {
 	const { registerBlockType } = wp.blocks;
-	const { InspectorControls, useBlockProps } = wp.blockEditor || wp.editor;
+	const { InspectorControls, useBlockProps, RichText } = wp.blockEditor || wp.editor;
 	const { PanelBody, TextControl, ToggleControl, RangeControl, Notice } = wp.components;
 	const { useSelect } = wp.data;
 	const { createElement: el, Fragment, useState } = wp.element;
@@ -43,39 +44,30 @@
 		apiVersion: 3,
 		edit(props) {
 			const { attributes, setAttributes, clientId } = props;
-			const {
-				title, includeH3, includeH4, includeH5, includeH6,
-				collapsed, maxDepth
-			} = attributes;
+			const { title, collapsed, maxDepth } = attributes;
 
-			// Local UI state for editor-only collapsing, seeded from attribute
+			// Editor-only collapse state so authors can fold it while editing
 			const [uiCollapsed, setUiCollapsed] = useState(!!collapsed);
 
-			// Safe blocks fetch; returns [] during pattern hydration
+			// Grab all blocks to preview headings live
 			const blocks = useSelect((select) => {
 				const sel = select('core/block-editor');
 				return sel && typeof sel.getBlocks === 'function' ? sel.getBlocks() : [];
 			}, []);
 
+			// H2 is base; include up to maxDepth (2..6)
+			const depthMax = Math.min(Math.max(maxDepth || 3, 2), 6);
 			const headings = collectHeadings(blocks)
-				.filter((h) => h && h.level >= 2 && h.level <= 6)
-				.filter((h) => h.level <= (maxDepth || 6))
-				.filter((h) => {
-					if (h.level === 2) return true;
-					if (h.level === 3) return !!includeH3;
-					if (h.level === 4) return !!includeH4;
-					if (h.level === 5) return !!includeH5;
-					if (h.level === 6) return !!includeH6;
-					return false;
-				});
+				.filter((h) => h && h.level >= 2 && h.level <= depthMax);
 
+			// Build nested preview structure
 			const base = 2;
 			const blockProps = useBlockProps({
 				className: 'wbp-toc' + (uiCollapsed ? ' is-collapsed' : '')
+				// Color + align + spacing classes/styles are added by useBlockProps automatically
 			});
 			const contentId = 'wbp-toc-editor-' + clientId;
 
-			// Keep the original nested preview logic that was working before.
 			function renderList(items) {
 				let currentLevel = base;
 				const root = { type: 'ul', props: { className: 'wbp-toc__list level-' + base }, children: [] };
@@ -84,7 +76,7 @@
 
 				items.forEach((h, idx) => {
 					const level = Math.min(Math.max(h.level, 2), 6);
-					// open deeper lists
+					// Open deeper lists
 					while (currentLevel < level) {
 						const newUl = { type: 'ul', props: { className: 'wbp-toc__list level-' + (currentLevel + 1) }, children: [] };
 						const lastLi = currentUl.children[currentUl.children.length - 1];
@@ -98,7 +90,7 @@
 						currentUl = newUl;
 						currentLevel++;
 					}
-					// close lists
+					// Close lists
 					while (currentLevel > level) {
 						stack.pop();
 						currentUl = stack[stack.length - 1];
@@ -124,50 +116,55 @@
 			}
 
 			return el(Fragment, {},
-				// Inspector controls (authoritative attributes for frontend/default)
+				// Inspector: title, default collapse, and single depth control
 				el(InspectorControls, {},
-					el(PanelBody, { title: 'Table of contents', initialOpen: true },
+					el(PanelBody, { title: 'TOC Settings', initialOpen: true },
 						el(TextControl, {
 							label: 'Title',
 							value: title,
 							onChange: (v) => setAttributes({ title: v || '' })
+						}),
+						el(RangeControl, {
+							label: 'Max heading level (starts at H2)',
+							min: 2, max: 6,
+							value: depthMax,
+							onChange: (v) => setAttributes({ maxDepth: v || 3 })
 						}),
 						el(ToggleControl, {
 							label: 'Collapse TOC by default (frontend)',
 							checked: !!collapsed,
 							onChange: (v) => setAttributes({ collapsed: !!v })
 						}),
-						el(RangeControl, {
-							label: 'Max depth',
-							min: 2, max: 6,
-							value: maxDepth,
-							onChange: (v) => setAttributes({ maxDepth: v || 6 }),
-							help: 'H2 is always included. Headings deeper than this are hidden.'
-						}),
 						el(Notice, { status: 'info', isDismissible: false },
-							'Use the button in the block to collapse in the editor. Sidebar toggle sets the default for visitors.'
-						),
-						el(ToggleControl, { label: 'Include H3', checked: !!includeH3, onChange: (v) => setAttributes({ includeH3: !!v }) }),
-						el(ToggleControl, { label: 'Include H4', checked: !!includeH4, onChange: (v) => setAttributes({ includeH4: !!v }) }),
-						el(ToggleControl, { label: 'Include H5', checked: !!includeH5, onChange: (v) => setAttributes({ includeH5: !!v }) }),
-						el(ToggleControl, { label: 'Include H6', checked: !!includeH6, onChange: (v) => setAttributes({ includeH6: !!v }) })
+							'Colors, spacing, and alignment are in the block toolbar/panels. This preview updates as you add headings.'
+						)
 					)
 				),
-				// Editor preview
+
+				// Editor preview (foldable)
 				el('nav', { ...blockProps, 'aria-label': 'Table of contents' },
-					el('button', {
-						type: 'button',
-						className: 'wbp-toc__toggle',
-						'aria-controls': contentId,
-						'aria-expanded': String(!uiCollapsed),
-						onClick: () => setUiCollapsed(!uiCollapsed)
-					}, title || 'On this page', el('span', { className: 'wbp-toc__caret', 'aria-hidden': true })),
+					el('div', { className: 'wbp-toc__header' },
+						el(RichText, {
+							tagName: 'h4',
+							className: 'wbp-toc__title',
+							value: title || 'On this page',
+							allowedFormats: [],
+							onChange: (v) => setAttributes({ title: v })
+						}),
+						el('button', {
+							type: 'button',
+							className: 'wbp-toc__toggle',
+							'aria-controls': contentId,
+							'aria-expanded': String(!uiCollapsed),
+							onClick: () => setUiCollapsed(!uiCollapsed)
+						}, el('span', { className: 'wbp-toc__caret', 'aria-hidden': true }))
+					),
 					el('div', { id: contentId, className: 'wbp-toc__content', hidden: !!uiCollapsed },
 						headings.length ? renderList(headings) : el('p', { className: 'wbp-toc__empty' }, 'No headings yet.')
 					)
 				)
 			);
 		},
-		save() { return null; }
+		save() { return null; } // dynamic render in PHP
 	});
 })(window.wp);

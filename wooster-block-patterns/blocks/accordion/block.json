@@ -12,12 +12,16 @@
   ],
   "supports": {
     "html": false,
+    "align": [ "wide", "full" ],
     "spacing": {
       "margin": true,
       "padding": true
     },
     "anchor": true,
     "className": true
+  },
+  "attributes": {
+    "allowMultiple": { "type": "boolean", "default": true }
   },
   "textdomain": "wooster-block-patterns"
 }

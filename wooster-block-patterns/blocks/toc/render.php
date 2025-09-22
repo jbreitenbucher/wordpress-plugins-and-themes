@@ -109,6 +109,7 @@ if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 		$list_html .= '</ul>';
 
 		$content_id = 'wbp-toc-' . wp_unique_id();
+		$title_id  = 'wbp-toc-title-' . $content_id;
 
 		$wrapper = get_block_wrapper_attributes( array(
 			'class' => 'wbp-toc' . ( $collapsed ? ' is-collapsed' : '' ),

@@ -144,20 +144,14 @@
 				// Editor preview (foldable)
 				el('nav', { ...blockProps, 'aria-label': 'Table of contents' },
 					el('div', { className: 'wbp-toc__header' },
-						el(RichText, {
-							tagName: 'h4',
-							className: 'wbp-toc__title',
-							value: title || 'On this page',
-							allowedFormats: [],
-							onChange: (v) => setAttributes({ title: v })
-						}),
+						el('span', { id: 'wbp-toc-title-' + clientId, className: 'wbp-toc__title', role: 'heading', 'aria-level': 2 }, title || 'On this page'),
 						el('button', {
 							type: 'button',
 							className: 'wbp-toc__toggle',
 							'aria-controls': contentId,
 							'aria-expanded': String(!uiCollapsed),
 							onClick: () => setUiCollapsed(!uiCollapsed)
-						}, el('span', { className: 'wbp-toc__caret', 'aria-hidden': true }))
+						}, el('span', { className: 'wbp-toc__caret', 'aria-hidden': true }), el('span', { className: 'screen-reader-text' }, 'Toggle table of contents'))
 					),
 					el('div', { id: contentId, className: 'wbp-toc__content', hidden: !!uiCollapsed },
 						headings.length ? renderList(headings) : el('p', { className: 'wbp-toc__empty' }, 'No headings yet.')

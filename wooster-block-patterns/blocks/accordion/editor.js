@@ -1,7 +1,7 @@
 ( function( wp ) {
   const { InnerBlocks, useBlockProps, BlockControls, InspectorControls } = wp.blockEditor || wp.editor;
   const { ToolbarGroup, ToolbarButton, PanelBody, ToggleControl } = wp.components;
-  const { useSelect, useDispatch } = wp.data;
+  const { useSelect, useDispatch, select: dataSelect } = wp.data;
   const { createElement: el, Fragment } = wp.element;
   const { createBlock, registerBlockType } = wp.blocks;
 
@@ -16,18 +16,16 @@
       const { clientId, attributes = {}, setAttributes } = props;
       const { insertBlocks, updateBlockAttributes } = useDispatch( 'core/block-editor' );
 
-      // Read optional allowMultiple attr if your block.json defines it; otherwise undefined and ignored.
+      // Optional: only used if your block.json defines it.
       const allowMultiple = attributes.hasOwnProperty( 'allowMultiple' ) ? !!attributes.allowMultiple : undefined;
 
-      // Child block clientIds (for Expand/Collapse All)
+      // Track children for toolbar enablement; actual updates fetch fresh IDs at click time.
       const childIds = useSelect( ( select ) => {
         const b = select( 'core/block-editor' ).getBlock( clientId );
         return b && b.innerBlocks ? b.innerBlocks.map( ( ib ) => ib.clientId ) : [];
       }, [ clientId ] );
-
       const hasChildren = childIds.length > 0;
 
-      // Actions
       const addSection = () => {
         insertBlocks(
           createBlock( 'wbp/accordion-item', { open: false, title: 'New question' } ),
@@ -36,10 +34,12 @@
         );
       };
 
+      // Fresh lookup to avoid stale closures; update each child's `open`.
       const setAll = ( isOpen ) => {
-        childIds.forEach( ( id ) => {
-          updateBlockAttributes && updateBlockAttributes( id, { open: !!isOpen }, true );
-        } );
+        const sel = dataSelect( 'core/block-editor' );
+        const parent = sel.getBlock( clientId );
+        const ids = parent && parent.innerBlocks ? parent.innerBlocks.map( ( ib ) => ib.clientId ) : [];
+        ids.forEach( ( id ) => updateBlockAttributes( id, { open: !!isOpen } ) );
       };
 
       const blockProps = useBlockProps( {
@@ -49,12 +49,13 @@
 
       return el(
         Fragment,
-        {},
-        // Optional inspector setting if you *kept* the allowMultiple attribute in block.json
-        el(
-          InspectorControls,
-          null,
-          attributes.hasOwnProperty( 'allowMultiple' ) &&
+        null,
+
+        // Only shows if `allowMultiple` exists in block.json
+        attributes.hasOwnProperty( 'allowMultiple' ) &&
+          el(
+            InspectorControls,
+            null,
             el(
               PanelBody,
               { title: 'Accordion Settings', initialOpen: true },
@@ -64,36 +65,32 @@
                 onChange: ( v ) => setAttributes( { allowMultiple: !!v } ),
               } )
             )
-        ),
+          ),
 
-        // Block toolbar
         el(
           BlockControls,
-          {},
+          null,
           el(
             ToolbarGroup,
-            {},
+            null,
             el( ToolbarButton, {
               icon: 'plus',
               label: 'Add question',
               onClick: addSection,
             } ),
-            hasChildren &&
-              el( ToolbarButton, {
-                icon: 'arrow-down-alt2',
-                label: 'Expand all',
-                onClick: () => setAll( true ),
-              } ),
-            hasChildren &&
-              el( ToolbarButton, {
-                icon: 'dismiss',
-                label: 'Collapse all',
-                onClick: () => setAll( false ),
-              } )
+            hasChildren && el( ToolbarButton, {
+              icon: 'arrow-down-alt2',
+              label: 'Expand all',
+              onClick: () => setAll( true ),
+            } ),
+            hasChildren && el( ToolbarButton, {
+              icon: 'dismiss',
+              label: 'Collapse all',
+              onClick: () => setAll( false ),
+            } )
           )
         ),
 
-        // Wrapper + children
         el(
           'div',
           blockProps,

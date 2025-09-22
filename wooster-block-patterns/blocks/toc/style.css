@@ -1,57 +1,85 @@
+/* TOC container */
 .wbp-toc {
   border: 1px solid var(--wp--preset--color--accent-4, #e2e8f0);
   border-radius: 6px;
   padding: 0;
   background: var(--wp--preset--color--base-2, #f8fafc);
   font-size: 0.95rem;
-}
-.wbp-toc__toggle {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--wp--preset--color--accent-4, #e2e8f0);
-  font-weight: 600;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-}
-.wbp-toc__caret {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 7px solid currentColor;
-  transition: transform .15s ease;
-  transform-origin: 50% 45%;
-}
-.wbp-toc.is-collapsed .wbp-toc__caret {
-  transform: rotate(-90deg);
+  overflow: visible;
 }
 
-.wbp-toc__content {
-  padding: 0.5rem 1rem 1rem;
+/* Header row: title + caret on one line */
+.wbp-toc__header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--wp--preset--color--accent-4, #e2e8f0);
+  overflow: visible; /* editor safety */
 }
-.wbp-toc__list {
-  list-style: none;
+
+/* Title behaves like inline text inside the flex row */
+.wbp-toc__title {
+  display: inline;
   margin: 0;
-  padding-left: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  flex: 1 1 auto;   /* take remaining space */
+  min-width: 0;     /* prevent overflow pushing caret */
 }
-.wbp-toc__item {
-  margin: 0.2rem 0;
+
+/* Caret-only toggle button (no full-width nonsense) */
+.wbp-toc__toggle {
+  width: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  cursor: pointer;
+  overflow: visible;
 }
+
+/* Caret: fixed box; triangle drawn in ::before, so it never clips */
+.wbp-toc__caret {
+  display: inline-flex;
+  width: 1.1em;
+  height: 1.1em;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.wbp-toc__caret::before {
+  content: "";
+  display: block;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: .35em 0 .35em .55em; /* ▶ */
+  border-color: transparent transparent transparent currentColor;
+  transform-origin: 45% 50%;
+  transform: rotate(0deg);
+  transition: transform .18s ease;
+}
+/* Rotate based on aria-expanded (works in editor + front) */
+.wbp-toc__toggle[aria-expanded="true"] .wbp-toc__caret::before { transform: rotate(90deg); }
+
+/* Content + list */
+.wbp-toc__content { padding: .5rem 1rem 1rem; }
+.wbp-toc__list { list-style: none; margin: 0; padding-left: 0; }
+.wbp-toc__item { margin: .2rem 0; }
 .wbp-toc__list.level-3 { margin-left: 1rem; }
 .wbp-toc__list.level-4 { margin-left: 2rem; }
 .wbp-toc__list.level-5 { margin-left: 3rem; }
 .wbp-toc__list.level-6 { margin-left: 4rem; }
-
 .wbp-toc a { text-decoration: none; }
 .wbp-toc a:hover, .wbp-toc a:focus { text-decoration: underline; }
 
-.wbp-toc .wbp-toc__nav { margin-top: .5rem; }
-.wbp-toc .wbp-toc__list { list-style: none; padding-left: 1rem; margin: .25rem 0; }
-.wbp-toc .wbp-toc__item a { text-decoration: none; }
-.wbp-toc.is-collapsed .wbp-toc__nav { display: none; }
+/* Editor-only: keep the header row from clipping the caret */
+.editor-styles-wrapper .wbp-toc__header { overflow: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wbp-toc__caret::before { transition: none; }
+}

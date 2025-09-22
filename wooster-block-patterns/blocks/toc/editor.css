@@ -3,3 +3,7 @@
   opacity: 0.8;
   font-style: italic;
 }
+/* Ensure caret follows header text color */
+.wbp-toc__header { color: inherit; }
+.wbp-toc__toggle { color: inherit; background: transparent; border: 0; }
+.wbp-toc__toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

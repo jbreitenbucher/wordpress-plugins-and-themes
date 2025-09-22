@@ -16,6 +16,8 @@
   padding: .75rem 1rem;
   border-bottom: 1px solid var(--wp--preset--color--accent-4, #e2e8f0);
   overflow: visible; /* editor safety */
+
+  justify-content: space-between;
 }
 
 /* Title behaves like inline text inside the flex row */
@@ -27,6 +29,8 @@
   line-height: inherit;
   flex: 1 1 auto;   /* take remaining space */
   min-width: 0;     /* prevent overflow pushing caret */
+
+  color: inherit;
 }
 
 /* Caret-only toggle button (no full-width nonsense) */
@@ -83,3 +87,7 @@
 @media (prefers-reduced-motion: reduce) {
   .wbp-toc__caret::before { transition: none; }
 }
+/* Ensure caret follows header text color */
+.wbp-toc__header { color: inherit; }
+.wbp-toc__toggle { color: inherit; background: transparent; border: 0; }
+.wbp-toc__toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

@@ -123,15 +123,17 @@ if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 			data-content="<?php echo esc_attr( $content_id ); ?>"
 			data-max-depth="<?php echo esc_attr( $max_depth ); ?>"
 		>
-			<button type="button"
-				class="wbp-toc__toggle"
-				aria-controls="<?php echo esc_attr( $content_id ); ?>"
-				aria-expanded="<?php echo $collapsed ? 'false' : 'true'; ?>">
+			<div class="wbp-toc__header">
+			<span id="<?php echo esc_attr( $title_id ); ?>" class="wbp-toc__title" role="heading" aria-level="2">
 				<?php echo esc_html( $title ?: __( 'On this page', 'wooster-block-patterns' ) ); ?>
+			</span>
+			<button type="button" class="wbp-toc__toggle" aria-controls="<?php echo esc_attr( $content_id ); ?>" aria-expanded="<?php echo $collapsed ? 'false' : 'true'; ?>">
 				<span class="wbp-toc__caret" aria-hidden="true"></span>
+				<span class="screen-reader-text"><?php esc_html_e( 'Toggle table of contents', 'wooster-block-patterns' ); ?></span>
 			</button>
+		</div>
 
-			<div id="<?php echo esc_attr( $content_id ); ?>" class="wbp-toc__content" <?php echo $collapsed ? 'hidden' : ''; ?>>
+		<div id="<?php echo esc_attr( $content_id ); ?>" class="wbp-toc__content" <?php echo $collapsed ? 'hidden' : ''; ?>>
 				<?php echo $list_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			</div>
 		</nav>

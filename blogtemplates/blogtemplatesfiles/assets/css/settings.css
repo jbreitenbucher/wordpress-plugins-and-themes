@@ -1,0 +1,29 @@
+.ui-widget {
+	display: inline-block;
+}
+
+#nbtpoststuff {
+	padding-top: 10px;
+}
+
+#nbtpoststuff #post-body.columns-2 {
+	margin-right: 300px;
+}
+.rtl #nbtpoststuff #post-body.columns-2 {
+	margin-left: 300px;
+	margin-right: 0;
+}
+
+#nbtpoststuff #post-body {
+padding: 0;
+}
+
+.nbt-poststuff {
+	padding-top:10px;
+}
+.postbox ul {
+	margin-left:20px;
+}
+
+
+/* 3568-1504612556-au */

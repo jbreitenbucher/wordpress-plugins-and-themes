@@ -1,18 +1,18 @@
 <?php
 /*
 Plugin Name: New Blog Templates
-Plugin URI: http://premium.wpmudev.org/project/new-blog-template
+Plugin URI: https://github.com/jbreitenbucher/wordpress-plugins-and-themes/tree/master/blogtemplates
 Description: Allows the site admin to create new blogs based on templates, to speed up the blog creation process, and allows users to choose from available templates when creating a site.
 Author: WPMU DEV/The College of Wooster
-Author URI: http://premium.wpmudev.org/
-Version: 4.0.0
+Author URI: https://wooster.edu/
+Version: 3.0.0
 Network: true
 Text Domain: blog_templates
 Domain Path: lang
 WDP ID: 130
 */
 
-/*  Copyright 2010-2011 Incsub (http://incsub.com)
+/*  Copyright 2025-?? (https://wooster.edu)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-define( 'NBT_PLUGIN_VERSION', '4.0.0' );
+define( 'NBT_PLUGIN_VERSION', '3.0.0' );
 if ( ! is_multisite() )
 	exit( __( 'The New Blog Template plugin is only compatible with WordPress Multisite.', 'blog_templates' ) );
 

@@ -3,25 +3,25 @@
 /** GRAVITY FORMS **/
 
 // Triggered when New Blog Templates class is created
-add_action( 'nbt_object_create', 'set_gravity_forms_hooks' );
+add_action( 'nbt_object_create', 'nbtpl_set_gravity_forms_hooks' );
 
 /**
  * Set all hooks needed for GF Integration
  *
  * @param blog_templates $blog_templates Object
  */
-function set_gravity_forms_hooks( $blog_templates ) {
+function nbtpl_set_gravity_forms_hooks( $blog_templates ) {
 	if ( ! function_exists( 'is_plugin_active' ) )
 		include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 
 	if ( ! is_plugin_active( 'gravityformsuserregistration/userregistration.php' ) || ! is_plugin_active( 'gravityforms/gravityforms.php' ) )
 		return;
 
-	add_filter( 'gform_user_registration_new_site_meta', 'nbt_save_new_blog_meta' );
-	add_filter( 'gform_user_registration_signup_meta', 'nbt_save_new_blog_meta' );
+	add_filter( 'gform_user_registration_new_site_meta', 'nbtpl_save_new_blog_meta' );
+	add_filter( 'gform_user_registration_signup_meta', 'nbtpl_save_new_blog_meta' );
 
-	add_filter( 'gform_userregistration_feed_settings_fields', 'nbt_gf_userregistration_feed_settings' );
-	add_filter( 'gform_submit_button', 'nbt_gf_form_render', 10, 2 );
+	add_filter( 'gform_userregistration_feed_settings_fields', 'nbtpl_gf_userregistration_feed_settings' );
+	add_filter( 'gform_submit_button', 'nbtpl_gf_form_render', 10, 2 );
 }
 
 /**
@@ -32,7 +32,7 @@ function set_gravity_forms_hooks( $blog_templates ) {
  *
  * @return string
  */
-function nbt_gf_form_render( $button_input, $form ) {
+function nbtpl_gf_form_render( $button_input, $form ) {
 	global $blog_templates;
 
 	if ( ! class_exists( 'GFUserData' ) ) {
@@ -64,19 +64,19 @@ function nbt_gf_form_render( $button_input, $form ) {
 	return $button_input;
 }
 
-function nbt_gf_userregistration_feed_settings( $settings ) {
+function nbtpl_gf_userregistration_feed_settings( $settings ) {
 	$settings['nbt'] = array(
-		'title' => __( 'New Blog Templates', 'blog_templates' ),
+		'title' => __( 'New Blog Templates', 'blogtemplates' ),
 		'description' => '',
 		'dependency' => array(),
 		'fields' => array(
 			array(
 				'name' => 'gf_user_registration_multisite_blog_templates',
-				'label' => __( 'Display Templates Selector', 'blog_templates' ),
+				'label' => __( 'Display Templates Selector', 'blogtemplates' ),
 				'type' => 'checkbox',
 				'choices' => array(
 					array(
-						'label' => __( 'Display Templates Selector', 'blog_templates' ),
+						'label' => __( 'Display Templates Selector', 'blogtemplates' ),
 						'value' => 0,
 						'name' => 'gf_user_registration_multisite_blog_templates',
 						'default_value' => 0
@@ -97,16 +97,17 @@ function nbt_gf_userregistration_feed_settings( $settings ) {
  * @param array $meta Current meta
  * @return array
  */
-function nbt_save_new_blog_meta( $meta ) {
+function nbtpl_save_new_blog_meta( $meta ) {
 
 	$model = nbt_get_model();
 
-	if ( isset( $_POST['blog_template' ] ) && $model->get_template( absint( $_POST['blog_template'] ) ) )
-		$meta['blog_template'] = absint( $_POST['blog_template'] );
-
+	if ( isset( $_POST['blog_template' ] ) && $model->get_template( absint( wp_unslash( $_POST['blog_template'] ) ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$meta['blog_template'] = absint( wp_unslash( $_POST['blog_template'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+	}
 	// Maybe GF is activating a signup instead
-	if ( empty( $meta['blog_template'] ) && isset( $_REQUEST['key'] ) && class_exists( 'GFSignup' ) ) {
-		$signup = GFSignup::get( $_REQUEST['key'] );
+	if ( empty( $meta['blog_template'] ) && isset( $_REQUEST['key'] ) && class_exists( 'GFSignup' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$key = sanitize_text_field( wp_unslash( $_REQUEST['key'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$signup = GFSignup::get( $key );
 		if ( ! is_wp_error( $signup ) && ! empty( $signup->meta['blog_template'] ) ) {
 			$meta['blog_template'] = $signup->meta['blog_template'];
 		}
@@ -128,5 +129,27 @@ function nbt_save_new_blog_meta( $meta ) {
 	return $meta;
 }
 
+/**
+ * Deprecated wrappers (Phase 3 naming: nbt_* -> nbtpl_*).
+ * These are intentionally retained for backward compatibility.
+ */
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function set_gravity_forms_hooks( $blog_templates ) {
+	return nbtpl_set_gravity_forms_hooks( $blog_templates );
+}
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_gf_form_render( $button_input, $form ) {
+	return nbtpl_gf_form_render( $button_input, $form );
+}
+
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_gf_userregistration_feed_settings( $settings ) {
+	return nbtpl_gf_userregistration_feed_settings( $settings );
+}
+
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_save_new_blog_meta( $meta ) {
+	return nbtpl_save_new_blog_meta( $meta );
+}

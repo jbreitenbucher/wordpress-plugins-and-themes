@@ -23,7 +23,7 @@ class NBT_Plugin_Settings_Handler {
     		'registration-templates-appearance' => '',
     		'page-showcase-id' => false,
     		'default' => '',
-    		'previewer_button_text' => __( 'Select this theme', 'blog_templates' ),
+    		'previewer_button_text' => __( 'Select this theme', 'blogtemplates' ),
     		'screenshots_width' => 200,
             'show-categories-selection' => false,
             'unselected-background-color' => '#DFD9D9',

@@ -1,6 +1,9 @@
 <?php
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+// The template copier performs one-off bulk operations during site cloning; caching offers no practical benefit
+// and core APIs do not cover all required operations (custom tables, bulk inserts, and transactional steps).
 #[\AllowDynamicProperties]
-class NBT_Template_copier {
+class NBTPL_Template_Copier {
 
     protected $settings;
     protected $template_blog_id;
@@ -10,7 +13,15 @@ class NBT_Template_copier {
     public function __construct( $src_blog_id, $new_blog_id, $user_id, $args ) {
         $defaults = $this->get_default_args();
         $args['to_copy'] = wp_parse_args( $args['to_copy'], $defaults['to_copy'] );
-        $this->settings = apply_filters( 'nbt_copier_settings', wp_parse_args( $args, $defaults ), $src_blog_id, $new_blog_id, $user_id );
+        $this->settings = apply_filters( 'nbtpl_copier_settings', wp_parse_args( $args, $defaults ), $src_blog_id, $new_blog_id, $user_id );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $this->settings = apply_filters_deprecated( 'nbt_copier_settings', array( $this->settings, $src_blog_id, $new_blog_id, $user_id ), '3.0.3', 'nbtpl_copier_settings' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $this->settings = apply_filters( 'nbt_copier_settings', $this->settings, $src_blog_id, $new_blog_id, $user_id );
+        }
 
         $this->template_blog_id = $src_blog_id;
         $this->new_blog_id = $new_blog_id;
@@ -50,8 +61,9 @@ class NBT_Template_copier {
         global $wpdb;
 
         switch_to_blog( $this->new_blog_id );
-        //Begin the transaction
-        $wpdb->query("BEGIN;");
+	        // Begin the transaction.
+	        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control; no core API.
+	        $wpdb->query( 'BEGIN;' );
 
         // In case we are not copying posts, we'll have to reset the terms count to 0
         if ( $this->settings['to_copy']['posts'] || $this->settings['to_copy']['pages'] ) {
@@ -70,18 +82,43 @@ class NBT_Template_copier {
 
         $this->copy_additional_tables();
 
-        if ( $this->settings['block_posts_pages'] ) {
-            $wpdb->query( "DELETE FROM $wpdb->postmeta WHERE meta_key = 'nbt_block_post'" );
-            $posts_ids = $wpdb->get_col( "SELECT ID FROM $wpdb->posts" );
-            if ( $posts_ids ) {
-                foreach ( $posts_ids as $post_id ) {
-                    update_post_meta( $post_id, 'nbt_block_post', true );
-                }
-            }
+	        if ( $this->settings['block_posts_pages'] ) {
+	            // Remove any existing block flags.
+	            delete_post_meta_by_key( 'nbt_block_post' );
+	
+	            // Apply the block flag to every post record in the new site.
+	            // Using core APIs avoids direct SQL and allows WordPress to handle caching.
+	            $posts_ids = get_posts(
+	                array(
+	                    'fields'                 => 'ids',
+	                    'post_type'              => 'any',
+	                    'post_status'            => 'any',
+	                    'nopaging'               => true,
+	                    'no_found_rows'          => true,
+	                    'update_post_meta_cache' => false,
+	                    'update_post_term_cache' => false,
+	                )
+	            );
+
+	            if ( ! empty( $posts_ids ) ) {
+	                foreach ( $posts_ids as $post_id ) {
+	                    update_post_meta( $post_id, 'nbt_block_post', true );
+	                }
+	            }
+	        }
+
+
+        $nbtpl_change_attachments_urls = apply_filters( 'nbtpl_change_attachments_urls', true );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $nbtpl_change_attachments_urls = apply_filters_deprecated( 'nbt_change_attachments_urls', array( $nbtpl_change_attachments_urls ), '3.0.3', 'nbtpl_change_attachments_urls' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $nbtpl_change_attachments_urls = apply_filters( 'nbt_change_attachments_urls', $nbtpl_change_attachments_urls );
         }
 
-
-        if ( apply_filters( 'nbt_change_attachments_urls', true ) )
+        if ( $nbtpl_change_attachments_urls )
             $this->set_content_urls( $this->template['blog_id'], $this->new_blog_id );
 
         if ( ! empty( $this->settings['update_dates'] ) ) {
@@ -98,7 +135,9 @@ class NBT_Template_copier {
             update_blog_status( $this->new_blog_id, 'public', get_blog_status( $this->template_blog_id, 'public' ) );
         }
 
-        $wpdb->query("COMMIT;"); //If we get here, everything's fine. Commit the transaction
+	        // If we get here, everything's fine. Commit the transaction.
+	        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control; no core API.
+	        $wpdb->query( 'COMMIT;' );
 
         if ( isset( $this->settings['to_copy']['settings'] ) && $this->settings['to_copy']['settings'] ) {
             switch_to_blog( $this->template_blog_id );
@@ -126,22 +165,25 @@ class NBT_Template_copier {
     function update_posts_dates( $post_type ) {
         global $wpdb;
 
-        $sql = $wpdb->prepare( "UPDATE $wpdb->posts
-            SET post_date = %s,
-            post_date_gmt = %s,
-            post_modified = %s,
-            post_modified_gmt = %s
-            WHERE post_type = %s
-            AND post_status = 'publish'",
-            current_time( 'mysql', false ),
-            current_time( 'mysql', true ),
-            current_time( 'mysql', false ),
-            current_time( 'mysql', true ),
-            $post_type
+        $wpdb->query(
+            // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+            $wpdb->prepare(
+                "UPDATE {$wpdb->posts}
+                    SET post_date = %s,
+                        post_date_gmt = %s,
+                        post_modified = %s,
+                        post_modified_gmt = %s
+                    WHERE post_type = %s
+                      AND post_status = 'publish'",
+                current_time( 'mysql', false ),
+                current_time( 'mysql', true ),
+                current_time( 'mysql', false ),
+                current_time( 'mysql', true ),
+                $post_type
+            )
         );
-
-        $wpdb->query( $sql );
     }
+
 
     function set_content_urls() {
         global $wpdb;
@@ -154,17 +196,35 @@ class NBT_Template_copier {
         switch_to_blog( $this->new_blog_id );
         $new_home_url = preg_replace( $pattern, '', home_url() );
 
-        $sql = $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE post_content LIKE %s AND post_status = 'publish';", '%' . $templated_home_url . '%' );
-        $results = $wpdb->get_results( $sql );
+        // Find all published posts whose content contains the templated home URL.
+        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$wpdb->posts}
+                    WHERE post_content LIKE %s
+                      AND post_status = 'publish'",
+                '%' . $templated_home_url . '%'
+            )
+        );
 
         foreach ( $results as $row ) {
-            //UPDATE
+            // Replace the templated home URL with the new blog URL.
             $post_content = str_replace( $templated_home_url, $new_home_url, $row->post_content );
-            $sql = $wpdb->prepare( "UPDATE $wpdb->posts SET post_content = %s WHERE ID = %d;", $post_content, $row->ID );
-            $wpdb->query( $sql );
+
+            $wpdb->query(
+                // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                $wpdb->prepare(
+                    "UPDATE {$wpdb->posts}
+                        SET post_content = %s
+                        WHERE ID = %d",
+                    $post_content,
+                    $row->ID
+                )
+            );
         }
+
         restore_current_blog();
     }
+
 
     public function copy_settings() {
         global $wpdb;
@@ -173,7 +233,7 @@ class NBT_Template_copier {
         $new_prefix = $wpdb->prefix;
 
         //Delete the current options, except blog-specific options
-        $wpdb->query("DELETE FROM $wpdb->options WHERE $exclude_settings");
+        $wpdb->query( "DELETE FROM {$wpdb->options} WHERE $exclude_settings" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 
         if ( ! $wpdb->last_error ) {
             //No error. Good! Now copy over the old settings
@@ -181,7 +241,7 @@ class NBT_Template_copier {
             //Switch to the template blog, then grab the settings/plugins/templates values from the template blog
             switch_to_blog( $this->template_blog_id );
 
-            $src_blog_settings = $wpdb->get_results("SELECT * FROM $wpdb->options WHERE $exclude_settings");
+            $src_blog_settings = $wpdb->get_results( "SELECT * FROM $wpdb->options WHERE $exclude_settings" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
             $template_prefix = $wpdb->prefix;
 
             //Switch back to the newly created blog
@@ -212,12 +272,13 @@ class NBT_Template_copier {
 
                 //Check for errors
                 if ( ! empty( $wpdb->last_error ) ) {
-                    $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %s - The template was not applied. (New Blog Templates - While inserting templated settings)', 'blog_templates' ), $wpdb->last_error ) . '</p></div>';
+                    /* translators: %s: database error message from $wpdb->last_error. */
+                    $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %s - The template was not applied. (New Blog Templates - While inserting templated settings)', 'blogtemplates' ), $wpdb->last_error ) . '</p></div>';
                     $wpdb->query("ROLLBACK;");
 
                     //We've rolled it back and thrown an error, we're done here
                     restore_current_blog();
-                    wp_die( $error );
+                    wp_die( wp_kses_post( $error ) );
                 }
             }
 
@@ -240,10 +301,11 @@ class NBT_Template_copier {
             do_action( 'blog_templates-copy-options', $this->template );
         }
         else {
-            $error = '<div id="message" class="error"><p>' . sprintf( __( 'Deletion Error: %s - The template was not applied. (New Blog Templates - While removing auto-generated settings)', 'blog_templates' ), $wpdb->last_error ) . '</p></div>';
+            /* translators: %s: database error message from $wpdb->last_error. */
+            $error = '<div id="message" class="error"><p>' . sprintf( __( 'Deletion Error: %s - The template was not applied. (New Blog Templates - While removing auto-generated settings)', 'blogtemplates' ), $wpdb->last_error ) . '</p></div>';
             $wpdb->query("ROLLBACK;");
             restore_current_blog(); //Switch back to our current blog
-            wp_die($error);
+            wp_die( wp_kses_post( $error ) );
         }
     }
 
@@ -377,6 +439,18 @@ class NBT_Template_copier {
         //Now, go back to the new blog that was just created
         restore_current_blog();
 
+        // Determine whether attachment URLs should be rewritten when copying files/settings.
+        // Default behaviour remains "true" as in legacy versions, while providing a prefixed hook name.
+        $nbtpl_change_attachments_urls = apply_filters( 'nbtpl_change_attachments_urls', true );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $nbtpl_change_attachments_urls = apply_filters_deprecated( 'nbt_change_attachments_urls', array( $nbtpl_change_attachments_urls ), '3.0.3', 'nbtpl_change_attachments_urls' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $nbtpl_change_attachments_urls = apply_filters( 'nbt_change_attachments_urls', $nbtpl_change_attachments_urls );
+        }
+
         $dir_to_copy = $this->_get_files_fs_path( $this->template_blog_id ); //ABSPATH . 'wp-content/blogs.dir/' . $this->template_blog_id . '/files';
         $dir_to_copy = apply_filters( 'blog_templates-copy-source_directory', $dir_to_copy, $this->template, $this->new_blog_id, $this->user_id );
 
@@ -397,6 +471,11 @@ class NBT_Template_copier {
                 include_once( ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php' );
                 include_once( ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php' );
 
+				// Ensure core file utilities (including copy_dir() and FS_CHMOD_* defaults) are available.
+				if ( ! function_exists( 'copy_dir' ) || ! defined( 'FS_CHMOD_DIR' ) || ! defined( 'FS_CHMOD_FILE' ) ) {
+					require_once ABSPATH . 'wp-admin/includes/file.php';
+				}
+
                 if ( is_object( $wp_filesystem ) )
                     $orig_filesystem = wp_clone( $wp_filesystem );
                 else
@@ -404,12 +483,15 @@ class NBT_Template_copier {
 
                 $wp_filesystem = new WP_Filesystem_Direct( false );
 
-                if ( ! defined('FS_CHMOD_DIR') )
-                    define('FS_CHMOD_DIR', 0755 );
-                if ( ! defined('FS_CHMOD_FILE') )
-                    define('FS_CHMOD_FILE', 0644 );
+                $skip_list = apply_filters( 'nbtpl_copy_files_skip_list', array(), $dir_to_copy );
 
-                $skip_list = apply_filters( 'nbt_copy_files_skip_list', array(), $dir_to_copy );
+                if ( function_exists( 'apply_filters_deprecated' ) ) {
+                    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                    $skip_list = apply_filters_deprecated( 'nbt_copy_files_skip_list', array( $skip_list, $dir_to_copy ), '3.0.3', 'nbtpl_copy_files_skip_list' );
+                } else {
+                    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                    $skip_list = apply_filters( 'nbt_copy_files_skip_list', $skip_list, $dir_to_copy );
+                }
                 $result = copy_dir( $dir_to_copy, $dir_to_copy_into, $skip_list );
 
                 unset( $wp_filesystem );
@@ -419,13 +501,15 @@ class NBT_Template_copier {
                 else
                     $wp_filesystem = $orig_filesystem;
 
-                if ( @file_exists( $dir_to_copy_into . '/sitemap.xml' ) )
-                    @unlink( $dir_to_copy_into . '/sitemap.xml' );
+				$sitemap_path = $dir_to_copy_into . '/sitemap.xml';
+				if ( file_exists( $sitemap_path ) ) {
+					wp_delete_file( $sitemap_path );
+				}
 
                 // If we set the same theme, we need to replace URLs in theme mods
                 if ( $this->settings['to_copy']['settings'] ) {
                     $mods = is_array( get_theme_mods() ) ? get_theme_mods() : array();
-                    if ( apply_filters( 'nbt_change_attachments_urls', true ) )
+                    if ( $nbtpl_change_attachments_urls )
                         array_walk_recursive( $mods, array( &$this, 'set_theme_mods_url' ), array( $template_content_url, $new_content_url, $this->template_blog_id, $this->new_blog_id ) );
                     update_option( "theme_mods_$theme_slug", $mods );
                 }
@@ -441,15 +525,16 @@ class NBT_Template_copier {
                     $attachment_guids[ dirname( $attachment->guid ) ] = $new_url;
                 }
 
-                if ( apply_filters( 'nbt_change_attachments_urls', true ) )
+                if ( $nbtpl_change_attachments_urls )
                     $this->set_attachments_urls( $attachment_guids );
 
 
             } else {
-                $error = '<div id="message" class="error"><p>' . sprintf( __( 'File System Error: Unable to create directory %s. (New Blog Templates - While copying files)', 'blog_templates' ), $dir_to_copy_into ) . '</p></div>';
+                /* translators: %s: destination directory path for copied files. */
+                $error = '<div id="message" class="error"><p>' . sprintf( __( 'File System Error: Unable to create directory %s. (New Blog Templates - While copying files)', 'blogtemplates' ), $dir_to_copy_into ) . '</p></div>';
                 $wpdb->query( 'ROLLBACK;' );
                 restore_current_blog();
-                wp_die( $error );
+                wp_die( wp_kses_post( $error ) );
 
             }
         }
@@ -477,7 +562,15 @@ class NBT_Template_copier {
         else
             $all_source_tables = $tables_to_copy;
 
-        $all_source_tables = apply_filters( 'nbt_copy_additional_tables', $all_source_tables );
+        $all_source_tables = apply_filters( 'nbtpl_copy_additional_tables', $all_source_tables );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $all_source_tables = apply_filters_deprecated( 'nbt_copy_additional_tables', array( $all_source_tables ), '3.0.3', 'nbtpl_copy_additional_tables' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $all_source_tables = apply_filters( 'nbt_copy_additional_tables', $all_source_tables );
+        }
 
         foreach ( $all_source_tables as $table ) {
             $add = in_array( $table, $tables_to_copy );
@@ -491,7 +584,7 @@ class NBT_Template_copier {
 
             $new_table = $new_prefix . substr( $tablebase, strlen( $template_prefix ) );
 
-            $result = $wpdb->get_results( "SHOW TABLES LIKE '{$new_table}'", ARRAY_N );
+            $result = $wpdb->get_results( "SHOW TABLES LIKE '{$new_table}'", ARRAY_N ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
             if ( ! empty( $result ) ) {
                 // The table is already present in the new blog
                 // Clear it
@@ -505,7 +598,7 @@ class NBT_Template_copier {
             else {
                 // The table does not exist in the new blog
                 // Let's create it
-                $create_script = current( $wpdb->get_col( 'SHOW CREATE TABLE ' . $table, 1 ) );
+                $create_script = current( $wpdb->get_col( 'SHOW CREATE TABLE ' . $table, 1 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 
                 if ( $create_script && preg_match( '/\(.*\)/s', $create_script, $match ) ) {
                     $table_body = $match[0];
@@ -516,27 +609,36 @@ class NBT_Template_copier {
                      * @param string $new_table The name of the new table that will be created
                      * @param string $table Source table name
                      */
-                    $create_table_query = apply_filters( 'nbt_create_additional_table_query', "CREATE TABLE IF NOT EXISTS {$new_table} {$table_body}", $new_table, $table );
-                    $wpdb->query( $create_table_query );
+                    $create_table_query = apply_filters( 'nbtpl_create_additional_table_query', "CREATE TABLE IF NOT EXISTS {$new_table} {$table_body}", $new_table, $table );
+
+                    if ( function_exists( 'apply_filters_deprecated' ) ) {
+                        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                        $create_table_query = apply_filters_deprecated( 'nbt_create_additional_table_query', array( $create_table_query, $new_table, $table ), '3.0.3', 'nbtpl_create_additional_table_query' );
+                    } else {
+                        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                        $create_table_query = apply_filters( 'nbt_create_additional_table_query', $create_table_query, $new_table, $table );
+                    }
+                    $wpdb->query( $create_table_query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery,PluginCheck.Security.DirectDB.UnescapedDBParameter
 
                     if ( $add ) {
                         // And copy the content if needed
                         if ( is_a( $wpdb, 'm_wpdb' ) ) {
-                            $rows = $wpdb->get_results( "SELECT * FROM {$table}", ARRAY_A );
+                            $rows = $wpdb->get_results( "SELECT * FROM {$table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
                             foreach ( $rows as $row ) {
                                 $wpdb->insert( $new_table, $row );
                             }
                         } else {
-                            $wpdb->query( "INSERT INTO {$new_table} SELECT * FROM {$table}" );
+                            $wpdb->query( "INSERT INTO {$new_table} SELECT * FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
                         }
                     }
 
                 }
 
                 if ( ! empty( $wpdb->last_error ) ) {
-                    $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %s - The template was not applied. (New Blog Templates - With CREATE TABLE query for Additional Tables)', 'blog_templates' ), $wpdb->last_error ) . '</p></div>';
+                    // translators: %s: error message or context string.
+                    $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %s - The template was not applied. (New Blog Templates - With CREATE TABLE query for Additional Tables)', 'blogtemplates' ), $wpdb->last_error ) . '</p></div>';
                     $wpdb->query("ROLLBACK;");
-                    wp_die($error);
+                    wp_die( wp_kses_post( $error ) );
                 }
             }
 
@@ -586,18 +688,25 @@ class NBT_Template_copier {
     function set_attachments_urls( $attachment_guids ) {
         global $wpdb;
 
-        $queries = array();
-        foreach ( $attachment_guids as $old_guid => $new_guid ) {
-            $queries[] = $wpdb->prepare( "UPDATE $wpdb->posts SET guid = REPLACE( guid, '%s', '%s' ) WHERE post_type = 'attachment'",
-                $old_guid,
-                $new_guid
-            );
+        if ( empty( $attachment_guids ) || ! is_array( $attachment_guids ) ) {
+            return;
         }
 
-        foreach ( $queries as $query )
-            $wpdb->query( $query );
-
+        foreach ( $attachment_guids as $old_guid => $new_guid ) {
+            // Update attachment GUIDs to point to the new blog URL.
+            $wpdb->query(
+                // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                $wpdb->prepare(
+                    "UPDATE {$wpdb->posts}
+                        SET guid = REPLACE( guid, %s, %s )
+                        WHERE post_type = 'attachment'",
+                    $old_guid,
+                    $new_guid
+                )
+            );
+        }
     }
+
 
 
      /**
@@ -621,6 +730,10 @@ class NBT_Template_copier {
             case 'attachment': $table = 'posts'; break;
             case 'attachmentmeta': $table = 'postmeta'; break;
         }
+        if ( is_array( $categories ) ) {
+            $categories = array_map( 'intval', $categories );
+        }
+
 
         do_action('blog_templates-copying_table', $table, $templated_blog_id);
 
@@ -666,7 +779,7 @@ class NBT_Template_copier {
             $query .= "INNER JOIN $wpdb->posts t2 ON t1.post_id = t2.ID WHERE t2.post_type = 'attachment'";
         }
 
-        $templated = $wpdb->get_results( $query );
+        $templated = $wpdb->get_results( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery,PluginCheck.Security.DirectDB.UnescapedDBParameter
         restore_current_blog(); //Switch back to the newly created blog
 
         if ( (is_countable($templated)?count($templated):0) )
@@ -687,12 +800,13 @@ class NBT_Template_copier {
 
             $wpdb->insert( $wpdb->$table, $process );
             if ( ! empty( $wpdb->last_error ) ) {
-                $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %1$s - The template was not applied. (New Blog Templates - While copying %2$s)', 'blog_templates' ), $wpdb->last_error, $table ) . '</p></div>';
+                /* translators: 1: database error message from $wpdb->last_error, 2: database table name. */
+                $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %1$s - The template was not applied. (New Blog Templates - While copying %2$s)', 'blogtemplates' ), $wpdb->last_error, $table ) . '</p></div>';
                 $wpdb->query("ROLLBACK;");
 
                 //We've rolled it back and thrown an error, we're done here
                 restore_current_blog();
-                wp_die($error);
+                wp_die( wp_kses_post( $error ) );
             }
         }
     }
@@ -716,7 +830,7 @@ class NBT_Template_copier {
         global $wpdb;
 
         //Get the new table structure
-        $new_table = (array)$wpdb->get_results( "SHOW COLUMNS FROM {$new_table_name}" );
+        $new_table = (array) $wpdb->get_results( "SHOW COLUMNS FROM " . esc_sql( $new_table_name ) );
 
         $new_fields = array();
         foreach( $new_table as $row ) {
@@ -750,13 +864,14 @@ class NBT_Template_copier {
         do_action('blog_templates-clearing_table', $table);
 
         //Delete the current categories
-        $wpdb->query("DELETE FROM $table");
+        $wpdb->query( "DELETE FROM $table" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 
         if ($wpdb->last_error) { //No error. Good! Now copy over the terms from the templated blog
-            $error = '<div id="message" class="error"><p>' . sprintf( __( 'Deletion Error: %1$s - The template was not applied. (New Blog Templates - While clearing %2$s)', 'blog_templates' ), $wpdb->last_error, $table ) . '</p></div>';
+            /* translators: 1: database error message from $wpdb->last_error, 2: database table name. */
+            $error = '<div id="message" class="error"><p>' . sprintf( __( 'Deletion Error: %1$s - The template was not applied. (New Blog Templates - While clearing %2$s)', 'blogtemplates' ), $wpdb->last_error, $table ) . '</p></div>';
             $wpdb->query("ROLLBACK;");
             restore_current_blog(); //Switch back to our current blog
-            wp_die($error);
+            wp_die( wp_kses_post( $error ) );
         }
     }
 
@@ -779,6 +894,7 @@ class NBT_Template_copier {
         switch_to_blog( $templated_blog_id );
         $template_prefix = $wpdb->prefix;
         $source_table = str_replace( $destination_prefix, $template_prefix, $dest_table );
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- $source_table is derived from vetted table names.
         $templated = $wpdb->get_results( "SELECT * FROM {$source_table}" );
         restore_current_blog(); //Switch back to the newly created blog
 
@@ -800,12 +916,13 @@ class NBT_Template_copier {
 
             $wpdb->insert( $dest_table, $process );
             if ( ! empty( $wpdb->last_error ) ) {
-                $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %1$s - The template was not applied. (New Blog Templates - While copying %2$s)', 'blog_templates' ), $wpdb->last_error, $table ) . '</p></div>';
+                 /* translators: 1: database error message from $wpdb->last_error, 2: database table name. */
+                $error = '<div id="message" class="error"><p>' . sprintf( __( 'Insertion Error: %1$s - The template was not applied. (New Blog Templates - While copying %2$s)', 'blogtemplates' ), $wpdb->last_error, $table ) . '</p></div>';
                 $wpdb->query("ROLLBACK;");
 
                 //We've rolled it back and thrown an error, we're done here
                 restore_current_blog();
-                wp_die($error);
+                wp_die( wp_kses_post( $error ) );
             }
         }
     }
@@ -841,43 +958,60 @@ class NBT_Template_copier {
 
         restore_current_blog();
 
-        $menus = $wpdb->get_col(
-            "SELECT ID FROM $templated_posts_table
-            WHERE post_type = 'nav_menu_item'"
+		        // phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- Cross-blog table names are derived from $wpdb properties via switch_to_blog().
+        $menu_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                'SELECT ID FROM ' . $templated_posts_table . ' WHERE post_type = %s',
+                'nav_menu_item'
+            )
         );
+        // phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
 
-        if ( ! empty( $menus ) ) {
+        $menu_ids = array_values( array_filter( array_map( 'absint', (array) $menu_ids ) ) );
 
-            // Duplicating the menu locations
+        if ( ! empty( $menu_ids ) ) {
+
+            // Duplicating the menu locations.
             set_theme_mod( 'nav_menu_locations', $new_blog_locations );
 
-            // Duplicating every menu item
-            // We cannot use nav-menu functions as we need
-            // to keep all the old IDs
-            $menus = '(' . implode( ',', $menus ) . ')';
+            // Duplicating every menu item.
+            // We cannot use nav-menu functions as we need to keep all the old IDs.
+            $placeholders = implode( ',', array_fill( 0, count( $menu_ids ), '%d' ) );
+
+            // phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- Cross-blog table names are derived from $wpdb properties via switch_to_blog().
             $wpdb->query(
-                "INSERT IGNORE INTO $new_posts_table
-                SELECT * FROM $templated_posts_table
-                WHERE ID IN $menus"
+                // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                $wpdb->prepare(
+                    'INSERT IGNORE INTO ' . $new_posts_table
+                        . ' SELECT * FROM ' . $templated_posts_table
+                        . ' WHERE ID IN (' . $placeholders . ')', // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                    $menu_ids
+                )
             );
 
             $wpdb->query(
-                "INSERT IGNORE INTO $new_postmeta_table
-                SELECT * FROM $templated_postmeta_table
-                WHERE post_id IN $menus"
+                // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                $wpdb->prepare(
+                    'INSERT IGNORE INTO ' . $new_postmeta_table
+                        . ' SELECT * FROM ' . $templated_postmeta_table
+                        . ' WHERE post_id IN (' . $placeholders . ')', // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                    $menu_ids
+                )
             );
 
             $wpdb->query(
-                "INSERT IGNORE INTO $new_term_relationships_table
-                SELECT * FROM $templated_term_relationships_table
-                WHERE object_id IN $menus"
+                // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                $wpdb->prepare(
+                    'INSERT IGNORE INTO ' . $new_term_relationships_table
+                        . ' SELECT * FROM ' . $templated_term_relationships_table
+                        . ' WHERE object_id IN (' . $placeholders . ')', // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                    $menu_ids
+                )
             );
-
-
+            // phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
         }
     }
-
-    function copy_menu( $templated_blog_id, $new_blog_id ) {
+function copy_menu( $templated_blog_id, $new_blog_id ) {
         global $wpdb;
 
         do_action( 'blog_templates-copying_menu', $templated_blog_id, $new_blog_id);
@@ -907,6 +1041,7 @@ class NBT_Template_copier {
         // First, the menus
         $menus_ids = implode( ',', $menu_locations );
 
+        // phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Cross-blog table identifiers come from $wpdb after switch_to_blog().
         $menus = $wpdb->get_results( "SELECT * FROM $templated_terms_table t
             JOIN $templated_term_taxonomy_table tt ON t.term_id = tt.term_id
             WHERE taxonomy = 'nav_menu'"
@@ -918,6 +1053,7 @@ class NBT_Template_copier {
 
                 // Inserting the menu
                 $wpdb->query(
+                    // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
                     $wpdb->prepare(
                         "INSERT IGNORE INTO $new_terms_table
                         (term_id, name, slug, term_group)
@@ -949,6 +1085,7 @@ class NBT_Template_copier {
 
                     // Inserting terms taxonomies
                     $wpdb->query(
+                        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
                         $wpdb->prepare(
                             "INSERT IGNORE INTO $new_term_taxonomy_table
                             (term_taxonomy_id, term_id, taxonomy, description, parent, count)
@@ -963,14 +1100,24 @@ class NBT_Template_copier {
                         )
                     );
                 }
+// phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 
-                $terms_taxonomies_ids = implode( ',', $terms_taxonomies_ids );
+                $terms_taxonomies_ids = array_values( array_filter( array_map( 'absint', $terms_taxonomies_ids ) ) );
 
-                $term_relationships = $wpdb->get_results(
-                    "SELECT * FROM $templated_term_relationships_table
-                    WHERE term_taxonomy_id IN ( $terms_taxonomies_ids )"
-                );
+                if ( empty( $terms_taxonomies_ids ) ) {
+                    $term_relationships = array();
+                } else {
+                    $tt_placeholders = implode( ',', array_fill( 0, count( $terms_taxonomies_ids ), '%d' ) );
+
+                    $term_relationships = $wpdb->get_results(
+                        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                        $wpdb->prepare(
+                            "SELECT * FROM $templated_term_relationships_table\n                            WHERE term_taxonomy_id IN ( $tt_placeholders )", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                            $terms_taxonomies_ids
+                        )
+                    );
+                }
 
 
 
@@ -980,6 +1127,7 @@ class NBT_Template_copier {
 
                     // Inserting terms relationships
                     $wpdb->query(
+                        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
                         $wpdb->prepare(
                             "INSERT IGNORE INTO $new_term_relationships_table
                             (object_id, term_taxonomy_id, term_order)
@@ -992,30 +1140,68 @@ class NBT_Template_copier {
                     );
                 }
 
+                // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
                 // We need to split the queries here due to MultiDB issues
 
                 // Inserting the objects
-                $objects_ids = implode( ',', $objects_ids );
+                $objects_ids = array_map( 'absint', $objects_ids );
+                $objects_ids = array_values( array_filter( $objects_ids ) );
 
-                $objects = $wpdb->get_results( "SELECT * FROM $templated_posts_table
-                    WHERE ID IN ( $objects_ids )", ARRAY_N );
+                if ( empty( $objects_ids ) ) {
+                    continue;
+                }
+
+                $ids_placeholders = implode( ',', array_fill( 0, count( $objects_ids ), '%d' ) );
+
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and dynamic IN placeholders.
+                $objects = $wpdb->get_results(
+                    // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                    $wpdb->prepare(
+                        "SELECT * FROM $templated_posts_table
+                            WHERE ID IN ( $ids_placeholders )", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                        $objects_ids
+                    ),
+                    ARRAY_N
+                );
 
                 foreach ( $objects as $object ) {
-                    $values = '("' . implode( '","', esc_sql( $object ) ) . '")';
-                    $wpdb->query( "INSERT IGNORE INTO $new_posts_table VALUES $values" );
-                }
+                    $row_placeholders = implode( ',', array_fill( 0, count( $object ), '%s' ) );
 
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and dynamic VALUES placeholders.
+                    $wpdb->query(
+                        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic VALUES() placeholders.
+                        $wpdb->prepare(
+                            "INSERT IGNORE INTO $new_posts_table VALUES ( $row_placeholders )", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic VALUES() placeholders.
+                            $object
+                        )
+                    );
+                }
 
                 // Inserting the objects meta
-                $objects_meta = $wpdb->get_results( "SELECT * FROM $templated_postmeta_table
-                    WHERE post_id IN ( $objects_ids )", ARRAY_N );
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and dynamic IN placeholders.
+                $objects_meta = $wpdb->get_results(
+                    // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                    $wpdb->prepare(
+                        "SELECT * FROM $templated_postmeta_table
+                            WHERE post_id IN ( $ids_placeholders )", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic IN() placeholders.
+                        $objects_ids
+                    ),
+                    ARRAY_N
+                );
 
                 foreach ( $objects_meta as $object_meta ) {
-                    $values = '("' . implode( '","', esc_sql( $object_meta ) ) . '")';
-                    $wpdb->query( "INSERT IGNORE INTO $new_postmeta_table VALUES $values" );
-                }
+                    $row_placeholders = implode( ',', array_fill( 0, count( $object_meta ), '%s' ) );
 
-            }
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and dynamic VALUES placeholders.
+                    $wpdb->query(
+                        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic VALUES() placeholders.
+                        $wpdb->prepare(
+                            "INSERT IGNORE INTO $new_postmeta_table VALUES ( $row_placeholders )", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic VALUES() placeholders.
+                            $object_meta
+                        )
+                    );
+                }
+}
 
         }
     }
@@ -1025,31 +1211,53 @@ class NBT_Template_copier {
      *
      * @return type
      */
+        // phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+
     function set_menus_urls( $templated_blog_id, $blog_id ) {
         global $wpdb;
 
         $pattern = '/^(http|https):\/\//';
+
+        // Get the "stripped" home URL for the template blog.
         switch_to_blog( $templated_blog_id );
         $templated_home_url = preg_replace( $pattern, '', home_url() );
         restore_current_blog();
 
+        // Get the "stripped" home URL for the new blog.
         switch_to_blog( $blog_id );
         $new_home_url = preg_replace( $pattern, '', home_url() );
 
-        $sql = "SELECT * FROM $wpdb->postmeta WHERE meta_key = '_menu_item_url';";
-        $results = $wpdb->get_results( $sql );
+	        // Look up all custom menu item URLs.
+	        // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Required to rewrite menu URLs; constrained by indexed meta_key.
+	        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT meta_id, meta_value
+                    FROM {$wpdb->postmeta}
+                    WHERE meta_key = %s",
+                '_menu_item_url'
+            )
+        );
 
         foreach ( $results as $row ) {
             $meta_value = preg_replace( $pattern, '', $row->meta_value );
+
             if ( strpos( $meta_value, $templated_home_url ) !== false ) {
-                //UPDATE
-                $meta_value = str_replace( $templated_home_url, $new_home_url, $row->meta_value );
-                $sql = $wpdb->prepare( "UPDATE $wpdb->postmeta SET meta_value = %s WHERE meta_id = %d;", $meta_value, $row->meta_id );
-                $wpdb->query( $sql );
+                $new_meta_value = str_replace( $templated_home_url, $new_home_url, $row->meta_value );
+
+                // Push the updated URL back to postmeta using the helper, so the SQL is prepared safely.
+                $wpdb->update(
+                    $wpdb->postmeta,
+                    array( 'meta_value' => $new_meta_value ),
+                    array( 'meta_id' => $row->meta_id ),
+                    array( '%s' ),
+                    array( '%d' )
+                );
             }
         }
+
         restore_current_blog();
     }
+
 
     /**
      * Reset the terms counts to 0
@@ -1064,3 +1272,9 @@ class NBT_Template_copier {
 }
 
 
+// Back-compat alias for pre-3.0.3 class name (prefix too short for current WPCS).
+if ( ! class_exists( 'NBT_Template_copier', false ) && class_exists( 'NBTPL_Template_Copier', false ) ) {
+    class_alias( 'NBTPL_Template_Copier', 'NBT_Template_copier' );
+}
+
+// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.SlowDBQuery.slow_db_query_meta_value

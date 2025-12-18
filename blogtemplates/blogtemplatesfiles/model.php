@@ -1,4 +1,6 @@
 <?php
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom network tables are used for templates/categories; wpdb is required. Caching is not appropriate for many write operations; reads are cached where meaningful.
+
 #[\AllowDynamicProperties]
 class blog_templates_model {
 		/**
@@ -68,9 +70,12 @@ class blog_templates_model {
 		public function delete_tables() {
 			global $wpdb;
 
-			$wpdb->query( "DROP TABLE $this->templates_table;" );
-			$wpdb->query( "DROP TABLE $this->categories_table;" );
-			$wpdb->query( "DROP TABLE $this->categories_relationships_table;" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall cleanup for plugin custom tables.
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $this->templates_table ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall cleanup for plugin custom tables.
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $this->categories_table ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall cleanup for plugin custom tables.
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $this->categories_relationships_table ) );
 		}
 
 		public function create_templates_table() {
@@ -128,12 +133,19 @@ class blog_templates_model {
 		public function check_for_uncategorized_templates() {
 			global $wpdb;
 
-			$uncategorized_templates = $wpdb->get_results( "SELECT t.ID
-				FROM  $this->templates_table t
-				LEFT OUTER JOIN $this->categories_relationships_table ct ON ct.template_id = t.ID
-				WHERE cat_id IS NULL");
-
-			if ( ! empty( $uncategorized_templates ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+						$uncategorized_templates = $wpdb->get_results(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+				$wpdb->prepare(
+					"SELECT t.ID
+					FROM %i t
+					LEFT OUTER JOIN %i ct ON ct.template_id = t.ID
+					WHERE ct.cat_id IS NULL",
+					$this->templates_table,
+					$this->categories_relationships_table
+				)
+			);
+if ( ! empty( $uncategorized_templates ) ) {
 				$default_cat_id = $this->get_default_category_id();
 				if ( ! empty( $default_cat_id ) ) {
 					foreach ( $uncategorized_templates as $template ) {
@@ -148,11 +160,19 @@ class blog_templates_model {
 		public function recount_categories() {
 			global $wpdb;
 
-			$templates = $wpdb->get_results( "SELECT cat_id, count(t.ID) the_count FROM $this->templates_table t
-				JOIN $this->categories_relationships_table r ON r.template_id = t.ID
-				GROUP BY cat_id" );
-
-			if ( ! empty( $templates ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+						$templates = $wpdb->get_results(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+				$wpdb->prepare(
+					"SELECT r.cat_id, COUNT(t.ID) AS the_count
+					FROM %i t
+					JOIN %i r ON r.template_id = t.ID
+					GROUP BY r.cat_id",
+					$this->templates_table,
+					$this->categories_relationships_table
+				)
+			);
+if ( ! empty( $templates ) ) {
 				foreach ( $templates as $template ) {
 					$wpdb->update(
 						$this->categories_table,
@@ -199,15 +219,24 @@ class blog_templates_model {
 		 * @return Boolean
 		 */
 		public function is_template( $blog_id ) {
-			global $wpdb;
+				global $wpdb;
 
-			$result = $wpdb->get_row( $wpdb->prepare( "SELECT blog_id FROM $this->templates_table WHERE blog_id = %d", $blog_id ) );
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$result = $wpdb->get_row(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+					$wpdb->prepare(
+						"SELECT blog_id FROM %i WHERE blog_id = %d",
+						$this->templates_table,
+						(int) $blog_id
+					)
+				);
 
-			if ( ! empty( $result ) )
-				return true;
+				if ( ! empty( $result ) ) {
+					return true;
+				}
 
-			return false;
-		}
+				return false;
+			}
 
 		public function update_template( $id, $args ) {
 			global $wpdb;
@@ -243,13 +272,16 @@ class blog_templates_model {
 
 			$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( $wpdb->prepare( "DELETE FROM $this->templates_table WHERE ID = %d AND network_id = %d", $id, $current_site_id ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( $wpdb->prepare( "DELETE FROM $this->categories_relationships_table WHERE template_id = %d", $id ) );
 		}
 
 		public function get_template( $id ) {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$template = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $this->templates_table WHERE ID = %d", $id ), ARRAY_A );
 
 			if ( empty( $template ) )
@@ -263,6 +295,7 @@ class blog_templates_model {
 		public function get_default_template_id() {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$default_template_id = $wpdb->get_var( "SELECT ID FROM $this->templates_table WHERE is_default = 1" );
 
 			if ( empty( $default_template_id ) )
@@ -273,35 +306,61 @@ class blog_templates_model {
 
 		public function get_templates() {
 			global $wpdb, $current_site;
-
-			$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
-			$sql = "SELECT * FROM $this->templates_table WHERE network_id = %d";
-
-			$order_by = filter_input( INPUT_GET, 'orderby' );
-
-			if ( in_array( $order_by, array( 'name', 'blog_id' ) ) ) {
-			    $order_direction = strtoupper( filter_input( INPUT_GET, 'order' ) );
-			    if ( !in_array( $order_direction, array( 'ASC', 'DESC' ) ) ) {
-			        $order_direction = '';
-			    }
-
-			    $sql .= " ORDER BY `" . $order_by . "` " . $order_direction;
+			$current_site_id = ! empty( $current_site ) ? (int) $current_site->id : 1;
+			$order_by        = filter_input( INPUT_GET, 'orderby', FILTER_SANITIZE_STRING );
+			$allowed_columns = array( 'name', 'blog_id' );
+			if ( ! in_array( $order_by, $allowed_columns, true ) ) {
+				$order_by = '';
 			}
 
-			$results = $wpdb->get_results( $wpdb->prepare( $sql, $current_site_id ), ARRAY_A );
+			$order_direction = '';
+			if ( ! empty( $order_by ) ) {
+				$order_direction = strtoupper( (string) filter_input( INPUT_GET, 'order', FILTER_SANITIZE_STRING ) );
+				if ( ! in_array( $order_direction, array( 'ASC', 'DESC' ), true ) ) {
+					$order_direction = 'ASC';
+				}
+			}
+
+			$results = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Internal plugin table identifiers.
+				$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+					"SELECT * FROM {$this->templates_table} WHERE network_id = %d",
+					$current_site_id
+				),
+				ARRAY_A
+			);
+
+			if ( ! empty( $results ) && ! empty( $order_by ) ) {
+				usort(
+					$results,
+					static function( $a, $b ) use ( $order_by, $order_direction ) {
+						$value_a = isset( $a[ $order_by ] ) ? $a[ $order_by ] : '';
+						$value_b = isset( $b[ $order_by ] ) ? $b[ $order_by ] : '';
+
+						if ( $value_a === $value_b ) {
+							return 0;
+						}
+
+						if ( 'DESC' === $order_direction ) {
+							return ( $value_a < $value_b ) ? 1 : -1;
+						}
+
+						return ( $value_a < $value_b ) ? -1 : 1;
+					}
+				);
+			}
 
 			if ( ! empty( $results ) ) {
 				$final_results = array();
 				foreach ( $results as $template ) {
-					$final_results[$template['ID']] = $template;
-					$final_results[$template['ID']]['options'] = maybe_unserialize( $template['options'] );
+					$final_results[ $template['ID'] ]                = $template;
+					$final_results[ $template['ID'] ]['options']     = maybe_unserialize( $template['options'] );
 				}
+
 				return $final_results;
 			}
-			else {
-				return array();
-			}
 
+			return array();
 		}
 
 		public function set_default_template( $id ) {
@@ -323,6 +382,7 @@ class blog_templates_model {
 
 			$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( $wpdb->prepare( "UPDATE $this->templates_table SET is_default = 0 WHERE network_id = %d", $current_site_id ) );
 		}
 
@@ -331,7 +391,7 @@ class blog_templates_model {
 
 			$default_cat = $this->get_default_template_category();
 			if ( empty( $default_cat ) )
-				$this->add_template_category( __( 'Default category', 'blog_templates' ), '', true );
+				$this->add_template_category( __( 'Default category', 'blogtemplates' ), '', true );
 		}
 
 		public function get_default_template_category() {
@@ -339,9 +399,11 @@ class blog_templates_model {
 
 			$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$default_cat = $wpdb->get_row( "SELECT * FROM $this->categories_table WHERE is_default = 1" );
 
 			if ( ! empty( $default_cat ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$wpdb->query( "UPDATE $this->categories_table SET is_default = 0 WHERE is_default = 1 AND ID != $default_cat->ID" );
 			}
 
@@ -351,12 +413,14 @@ class blog_templates_model {
 		public function get_categories_count() {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			return $wpdb->get_var( "SELECT COUNT(ID) FROM $this->categories_table" );
 		}
 
 		public function get_template_category( $cat_id ) {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$results = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $this->categories_table WHERE ID = %d", $cat_id ), ARRAY_A );
 
 			if ( empty( $results ) )
@@ -368,6 +432,7 @@ class blog_templates_model {
 		public function get_templates_categories() {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$results = $wpdb->get_results( "SELECT * FROM $this->categories_table", ARRAY_A );
 
 			return $results;
@@ -376,8 +441,10 @@ class blog_templates_model {
 		public function delete_template_category( $cat_id ) {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( $wpdb->prepare( "DELETE FROM $this->categories_table WHERE ID = %d", $cat_id ) );
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( $wpdb->prepare( "DELETE FROM $this->categories_relationships_table WHERE cat_id = %d", $cat_id ) );
 		}
 
@@ -420,6 +487,7 @@ class blog_templates_model {
 		public function is_default_category( $id ) {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			return $wpdb->get_var( $wpdb->prepare( "SELECT is_default FROM $this->categories_table WHERE ID = %d", $id ) );
 		}
 
@@ -428,19 +496,24 @@ class blog_templates_model {
 
 			$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			return $wpdb->get_var( "SELECT ID FROM $this->categories_table WHERE is_default = '1'" );
 		}
 
 		public function get_template_categories( $id ) {
 			global $wpdb;
 
-			$results =  $wpdb->get_results(
+			$results =  $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Internal plugin table identifiers.
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
 				$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 					"SELECT rel.cat_id ID, cat.name, cat.description, cat.is_default
-					FROM  $this->categories_table cat
-					INNER JOIN $this->categories_relationships_table rel ON rel.cat_id = cat.ID
+					FROM %i cat
+					INNER JOIN %i rel ON rel.cat_id = cat.ID
 					WHERE rel.template_id = %d",
-					$id
+					$this->categories_table,
+					$this->categories_relationships_table,
+					(int) $id
 				),
 				ARRAY_A
 			);
@@ -457,75 +530,102 @@ class blog_templates_model {
 		public function update_template_categories( $tid, $cats ) {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( $wpdb->prepare( "DELETE FROM $this->categories_relationships_table WHERE template_id = %d", $tid ) );
 
 			foreach ( $cats as $cat ) {
-				$query = $wpdb->prepare(
-					"INSERT INTO $this->categories_relationships_table (cat_id,template_id) VALUES (%d,%d)",
-					$cat,
-					$tid
+				$wpdb->query( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Internal plugin table identifiers.
+				$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						"INSERT INTO {$this->categories_relationships_table} (cat_id,template_id) VALUES (%d,%d)",
+						$cat,
+						$tid
+					)
 				);
-				$wpdb->query( $query );
 			}
 
 			$this->recount_categories();
 		}
 
 		public function exist_relation( $tid, $cat_id ) {
-			global $wpdb;
+				global $wpdb;
 
-			$result = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $this->categories_relationships_table WHERE template_id = %d AND cat_id = %d", $tid, $cat_id ) );
-
-			if ( ! empty( $result ) )
-				return true;
-
-			return false;
-		}
-
-		public function get_templates_by_category( $cat_id ) {
-
-			global $wpdb, $current_site;
-
-			$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
-
-			$where = array();
-			$join = '';
-			$where[] = $wpdb->prepare( 'network_id = %d', $current_site_id );
-
-			if ( $cat_id ) {
-				$where[] = $wpdb->prepare( 'r.cat_id = %d', $cat_id );
-				$join = "INNER JOIN $this->categories_relationships_table r ON t.ID = r.template_id";
-			}
-
-			$where = " WHERE " . implode( " AND ", $where );
-			$query = "SELECT t.* FROM $this->templates_table t $join $where";
-
-			$results = $wpdb->get_results( $query, ARRAY_A );
-
-			if ( (boolean)$this->is_default_category( $cat_id ) ) {
-				// If we are searching by default category we need to merge
-				// those templates without category assigned
-				$templates_with_no_cat = $wpdb->get_results(
-					"SELECT t.* FROM $this->templates_table t
-					WHERE t.ID NOT IN
-					( SELECT DISTINCT( tr.template_id ) FROM $this->categories_relationships_table tr )",
-					ARRAY_A
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$result = $wpdb->get_row(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+					$wpdb->prepare(
+						"SELECT * FROM %i WHERE template_id = %d AND cat_id = %d",
+						$this->categories_relationships_table,
+						(int) $tid,
+						(int) $cat_id
+					)
 				);
 
-				$results = array_merge( $results, $templates_with_no_cat );
+				if ( ! empty( $result ) ) {
+					return true;
+				}
+
+				return false;
 			}
 
+		public function get_templates_by_category( $cat_id ) {
+			global $wpdb, $current_site;
+
+			$current_site_id = ! empty( $current_site ) ? (int) $current_site->id : 1;
+			$cat_id          = (int) $cat_id;
+
+			if ( $cat_id > 0 ) {
+				$results = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Internal plugin table identifiers.
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+					$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						"SELECT t.* FROM %i t
+						 INNER JOIN %i r ON t.ID = r.template_id
+						 WHERE t.network_id = %d AND r.cat_id = %d",
+						$this->templates_table,
+						$this->categories_relationships_table,
+						(int) $current_site_id,
+						(int) $cat_id
+					),
+					ARRAY_A
+				);
+			} else {
+				$results = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Internal plugin table identifiers.
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+					$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						"SELECT t.* FROM %i t WHERE t.network_id = %d",
+						$this->templates_table,
+						(int) $current_site_id
+					),
+					ARRAY_A
+				);
+			}
+
+			if ( (bool) $this->is_default_category( $cat_id ) ) {
+				// If we are searching by default category we need to merge
+				// those templates without a category assigned.
+								$templates_with_no_cat = $wpdb->get_results(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+					$wpdb->prepare(
+						"SELECT t.* FROM %i t
+						WHERE t.ID NOT IN ( SELECT DISTINCT tr.template_id FROM %i tr )",
+						$this->templates_table,
+						$this->categories_relationships_table
+					),
+					ARRAY_A
+				);
+$results = array_merge( $results, $templates_with_no_cat );
+			}
 
 			if ( ! empty( $results ) ) {
 				$new_results = array();
 				foreach ( $results as $template ) {
-
 					$tmp_template = $template;
 					$tmp_template = array_merge( maybe_unserialize( $template['options'] ), $tmp_template );
 
 					unset( $tmp_template['options'] );
 					$new_results[] = $tmp_template;
-
 				}
 				$results = $new_results;
 			}
@@ -533,4 +633,3 @@ class blog_templates_model {
 			return $results;
 		}
 }
-

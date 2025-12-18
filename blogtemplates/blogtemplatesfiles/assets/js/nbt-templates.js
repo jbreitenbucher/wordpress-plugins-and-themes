@@ -10,9 +10,9 @@ jQuery(document).ready(function($) {
 			
 			all_selectors.each(function(i,selector) {
 				selector = $(selector);
-				if ( selector.attr('checked') ) {
+				if ( selector.prop('checked') ) {
 					var list_items = nbt_settings.get_list(selector);
-					list_items.attr('disabled',true);
+					list_items.prop('disabled', true);
 				}	
 			});
 
@@ -22,12 +22,12 @@ jQuery(document).ready(function($) {
 				if ( item.hasClass('all-selector') ) {
 					var list_items = nbt_settings.get_list(item);
 					
-					if ( item.attr('checked') ) {
-						list_items.attr('checked', false);
-						list_items.attr('disabled',  true);
+					if ( item.prop('checked') ) {
+						list_items.prop('checked', false);
+						list_items.prop('disabled', true);
 					}
 					else {
-						list_items.attr('disabled',  false);
+						list_items.prop('disabled', false);
 					}
 				}
 			});

@@ -16,29 +16,22 @@ class Blog_Templates_Theme_Selection_Toolbar {
     }
 
     public function enqueue_assets() {
-        if ( ! defined( 'NBT_PLUGIN_URL' ) ) {
+        if ( ! defined( 'NBTPL_PLUGIN_URL' ) ) {
             return;
         }
 
-        wp_enqueue_script(
-            'nbt-toolbar-scripts',
-            NBT_PLUGIN_URL . 'blogtemplatesfiles/assets/js/toolbar.js',
-            array( 'jquery' ),
-            null,
-            true
-        );
-
-        $params = array(
+        wp_enqueue_script( 'nbt-toolbar-scripts', NBTPL_PLUGIN_URL . 'blogtemplatesfiles/assets/js/toolbar.js', array( 'jquery' ), NBTPL_PLUGIN_VERSION, true );
+$params = array(
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'imagesurl' => esc_url_raw( NBT_PLUGIN_URL . 'blogtemplatesfiles/assets/images/' ),
+            'imagesurl' => esc_url_raw( NBTPL_PLUGIN_URL . 'blogtemplatesfiles/assets/images/' ),
             'nbt_nonce' => wp_create_nonce( 'nbt_toolbar_nonce' ),
             'type' => $this->type,
         );
 
         wp_localize_script( 'nbt-toolbar-scripts', 'nbt_toolbar_js', $params );
 
-        wp_register_style( 'nbt-toolbar-styles', false );
-        wp_enqueue_style( 'nbt-toolbar-styles' );
+        wp_register_style( 'nbt-toolbar-styles', false, array(), NBTPL_PLUGIN_VERSION );
+wp_enqueue_style( 'nbt-toolbar-styles' );
 
         $inline_css = $this->generate_inline_css();
         if ( $inline_css ) {
@@ -72,7 +65,7 @@ class Blog_Templates_Theme_Selection_Toolbar {
         }
 
         $tabs        = array();
-        $tabs[0]     = __( 'ALL', 'blog_templates' );
+        $tabs[0]     = __( 'ALL', 'blogtemplates' );
         foreach ( $this->categories as $category ) {
             $id = isset( $category['ID'] ) ? (int) $category['ID'] : 0;
             $name = isset( $category['name'] ) ? $category['name'] : '';
@@ -82,18 +75,34 @@ class Blog_Templates_Theme_Selection_Toolbar {
             $tabs[ $id ] = $name;
         }
 
-        $tabs = apply_filters( 'nbt_selection_toolbar_tabs', $tabs );
-        $default_tab = apply_filters( 'nbt_selection_toolbar_default_tab', key( $tabs ) );
+        $tabs = apply_filters( 'nbtpl_selection_toolbar_tabs', $tabs );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $tabs = apply_filters_deprecated( 'nbt_selection_toolbar_tabs', array( $tabs ), '3.0.3', 'nbtpl_selection_toolbar_tabs' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $tabs = apply_filters( 'nbt_selection_toolbar_tabs', $tabs );
+        }
+        $default_tab = apply_filters( 'nbtpl_selection_toolbar_default_tab', key( $tabs ) );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $default_tab = apply_filters_deprecated( 'nbt_selection_toolbar_default_tab', array( $default_tab, key( $tabs ) ), '3.0.3', 'nbtpl_selection_toolbar_default_tab' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $default_tab = apply_filters( 'nbt_selection_toolbar_default_tab', $default_tab, key( $tabs ) );
+        }
         $this->default_category_id = (int) $default_tab;
         ?>
         <div id="nbt-toolbar" data-toolbar-type="<?php echo esc_attr( $this->type ); ?>">
 
             <h4 class="nbt-toolbar-title">
-            <?php esc_html_e( 'Filter templates by category', 'blog_templates' ); ?>
+            <?php esc_html_e( 'Filter templates by category', 'blogtemplates' ); ?>
             </h4>
 
             <label class="screen-reader-text" for="nbt-template-category">
-                <?php esc_html_e( 'Filter templates by category', 'blog_templates' ); ?>
+                <?php esc_html_e( 'Filter templates by category', 'blogtemplates' ); ?>
             </label>
 
             <select id="nbt-template-category" class="nbt-template-category-select">
@@ -119,7 +128,7 @@ class Blog_Templates_Theme_Selection_Toolbar {
 }
 
 /* AJAX handler */
-function nbt_filter_categories() {
+function nbtpl_filter_categories() {
     // Basic existence checks
     $cat_id = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
     $type   = isset( $_POST['type'] ) ? sanitize_text_field( wp_unslash( $_POST['type'] ) ) : '';
@@ -150,7 +159,7 @@ function nbt_filter_categories() {
     if ( '' === $type ) {
         echo '<select name="blog_template">';
         if ( empty( $checked ) ) {
-            echo '<option value="none">' . esc_html__( 'None', 'blog_templates' ) . '</option>';
+            echo '<option value="none">' . esc_html__( 'None', 'blogtemplates' ) . '</option>';
         }
     }
 
@@ -171,5 +180,17 @@ function nbt_filter_categories() {
 
     wp_send_json_success( array( 'html' => $html ) );
 }
-add_action( 'wp_ajax_nbt_filter_categories', 'nbt_filter_categories' );
-add_action( 'wp_ajax_nopriv_nbt_filter_categories', 'nbt_filter_categories' );
+
+
+/**
+ * Legacy wrapper for backwards-compat.
+ *
+ * @deprecated 3.0.3 Use nbtpl_filter_categories().
+ */
+ // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Deprecated wrapper for backwards compatibility.
+function nbt_filter_categories() {
+	nbtpl_filter_categories();
+}
+
+add_action( 'wp_ajax_nbt_filter_categories', 'nbtpl_filter_categories' );
+add_action( 'wp_ajax_nopriv_nbt_filter_categories', 'nbtpl_filter_categories' );

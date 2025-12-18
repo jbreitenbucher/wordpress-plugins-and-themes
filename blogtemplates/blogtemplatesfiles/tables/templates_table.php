@@ -7,7 +7,7 @@ if( ! class_exists( 'WP_List_Table' ) )
 
 class NBT_Templates_Table extends WP_List_Table {
 
-    var $localization_domain = 'blog_templates';
+    var $localization_domain = 'blogtemplates';
 
     function __construct(){
         parent::__construct(
@@ -71,16 +71,20 @@ class NBT_Templates_Table extends WP_List_Table {
         $url_remove_default = wp_nonce_url( $url_remove_default, 'blog_templates-remove_default' );
 
         $actions = array(
-            'edit'      => sprintf( __( '<a href="%s">Edit</a>', 'blog_templates' ), $url ),
-            'delete'    => sprintf( __( '<a href="%s">Delete</a>', 'blog_templates' ), $url_delete ),
+        /* translators: %s: URL for the edit template link. */
+            'edit'      => sprintf( __( '<a href="%s">Edit</a>', 'blogtemplates' ), $url ),
+        /* translators: %s: URL for the delete template link. */
+            'delete'    => sprintf( __( '<a href="%s">Delete</a>', 'blogtemplates' ), $url_delete ),
         );
 
         if ( $item['is_default'] ) {
-            $actions['remove_default'] = sprintf( __( '<a href="%s">Remove default</a>', 'blog_templates' ), $url_remove_default );
-            $default = ' <strong>' . __( '(Default)', 'blog_templates' ) . '</strong>';
+        /* translators: %s: URL for the remove default template link. */
+            $actions['remove_default'] = sprintf( __( '<a href="%s">Remove default</a>', 'blogtemplates' ), $url_remove_default );
+            $default = ' <strong>' . __( '(Default)', 'blogtemplates' ) . '</strong>';
         }
         else {
-            $actions['make_default'] = sprintf( __( '<a href="%s">Make default</a>', 'blog_templates' ), $url_default );
+        /* translators: %s: URL for the make default template link. */
+            $actions['make_default'] = sprintf( __( '<a href="%s">Make default</a>', 'blogtemplates' ), $url_default );
             $default = '';
         }
 
@@ -92,7 +96,7 @@ class NBT_Templates_Table extends WP_List_Table {
         $name = get_bloginfo( 'name' );
         $url = admin_url();
         restore_current_blog();
-        return $name . ' <a href="' . $url . '">' . __( 'Go to Dashboard', 'blog_templates' ) . '</a>';
+        return $name . ' <a href="' . $url . '">' . __( 'Go to Dashboard', 'blogtemplates' ) . '</a>';
     }
 
     function column_screenshot( $item ) {
@@ -107,9 +111,9 @@ class NBT_Templates_Table extends WP_List_Table {
 
     function get_columns(){
         $columns = array(
-            'name'          => __( 'Template Name', 'blog_templates' ),
-            'blog'          => __( 'Blog', 'blog_templates' ),
-            'screenshot'    => __( 'Screenshot', 'blog_templates' ),
+            'name'          => __( 'Template Name', 'blogtemplates' ),
+            'blog'          => __( 'Blog', 'blogtemplates' ),
+            'screenshot'    => __( 'Screenshot', 'blogtemplates' ),
         );
         return apply_filters( 'blog_templates-templates_table_columns', $columns );
     }

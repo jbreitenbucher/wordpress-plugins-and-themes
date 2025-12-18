@@ -1,6 +1,6 @@
 <?php
 #[\AllowDynamicProperties]
-class GF_Field_NBT extends GF_Field {
+class NBTPL_GF_Field_NBT extends GF_Field {
 	public $type = 'radio';
 
 	public function get_form_editor_field_title() {
@@ -108,4 +108,9 @@ class GF_Field_NBT extends GF_Field {
 
 		return $is_csv ? $value : GFCommon::selection_display( $value, $this, rgar( $entry, 'currency' ), $use_text );
 	}
+}
+
+// Back-compat: Gravity Forms expects the GF_Field_{type} naming convention.
+if ( ! class_exists( 'GF_Field_NBT', false ) ) {
+	class_alias( 'NBTPL_GF_Field_NBT', 'GF_Field_NBT' );
 }

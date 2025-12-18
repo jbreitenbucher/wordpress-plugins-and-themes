@@ -1,55 +1,77 @@
 <?php
 
 
-function nbt_get_sites_search() {
-	global $wpdb, $current_site;
-
-	if ( ! empty( $_POST['term'] ) )
-		$term = $_REQUEST['term'];
-	else
-		echo json_encode( array() );
-
-	$s = isset( $_REQUEST['term'] ) ? stripslashes( trim( $_REQUEST[ 'term' ] ) ) : '';
-	$wild = '%';
-	if ( false !== strpos($s, '*') ) {
-		$wild = '%';
-		$s = trim($s, '*');
+function nbtpl_get_sites_search() {
+	
+	// Term-based search used via authenticated AJAX; no state is changed.
+	if ( empty( $_REQUEST['term'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended
+		echo wp_json_encode( array() );
+		die();
 	}
 
-	$like_s = esc_sql( like_escape( $s ) );
-	$query = "SELECT * FROM {$wpdb->blogs} WHERE site_id = '{$wpdb->siteid}' ";
+	$raw_term = sanitize_text_field( wp_unslash( $_REQUEST['term'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+	$s        = trim( $raw_term );
 
-	if ( is_subdomain_install() ) {
-		$blog_s = $wild . $like_s . $wild;
-		$query .= " AND  ( {$wpdb->blogs}.domain LIKE '$blog_s' ) LIMIT 10";
-	}
-	else {
-		if ( $like_s != trim('/', $current_site->path) )
-			$blog_s = $current_site->path . $like_s . $wild . '/';
-		else
-			$blog_s = $like_s;
-
-		$query .= " AND  ( {$wpdb->blogs}.path LIKE '$blog_s' ) LIMIT 10";
-	}
-
-
-
-	$results = $wpdb->get_results( $query );
 
 	$returning = array();
-	if ( ! empty( $results ) ) {
-		foreach ( $results as $row ) {
-			$details = get_blog_details( $row->blog_id );
-			$returning[] = array(
-				'blog_name' => $details->blogname,
-				'path' => is_subdomain_install() ? $row->domain : $row->path,
-				'blog_id' => $row->blog_id
+
+	if ( ! empty( $s ) ) {
+		$pattern = $s;
+		$search_base = trim( str_replace( '*', '', $pattern ) );
+		if ( '' !== $search_base ) {
+			$regex = '/' . str_replace( '\\*', '.*', preg_quote( $pattern, '/' ) ) . '/i';
+
+			$sites = get_sites(
+				array(
+					'search'         => $search_base,
+					'search_columns' => array( 'domain', 'path' ),
+					'number'         => 50,
+				)
 			);
+
+			if ( ! empty( $sites ) ) {
+				foreach ( $sites as $site ) {
+					$blog_id = isset( $site->blog_id ) ? (int) $site->blog_id : ( isset( $site->id ) ? (int) $site->id : 0 );
+					if ( 0 === $blog_id ) {
+						continue;
+					}
+
+					$domain = isset( $site->domain ) ? (string) $site->domain : '';
+					$path   = isset( $site->path ) ? (string) $site->path : '';
+
+					// Preserve the original wildcard behavior ("*") without a direct DB query.
+					if ( ! preg_match( $regex, $domain ) && ! preg_match( $regex, $path ) ) {
+						continue;
+					}
+
+					$details = get_blog_details( $blog_id );
+					if ( ! $details ) {
+						continue;
+					}
+
+					$returning[] = array(
+						'blog_name' => $details->blogname,
+						'path'      => is_subdomain_install() ? $domain : $path,
+						'blog_id'   => $blog_id,
+					);
+				}
+			}
 		}
+
 	}
 
-	echo json_encode( $returning );
+	echo wp_json_encode( $returning );
 
 	die();
 }
-add_action( 'wp_ajax_nbt_get_sites_search', 'nbt_get_sites_search' );
+add_action( 'wp_ajax_nbt_get_sites_search', 'nbtpl_get_sites_search' );
+
+if ( ! function_exists( 'nbt_get_sites_search' ) ) {
+	/**
+	 * @deprecated 3.0.3 Use nbtpl_get_sites_search()
+	 */
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	function nbt_get_sites_search() {
+		nbtpl_get_sites_search();
+	}
+}

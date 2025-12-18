@@ -1,4 +1,6 @@
 <?php
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Upgrade routines run rarely and must operate on custom tables; wpdb is required. Caching is not meaningful during upgrades.
+
 
 function blog_templates_upgrade_19() {
 
@@ -55,7 +57,7 @@ function blog_templates_upgrade_19() {
 	$new_options = array();
 	$new_options['show-registration-templates'] = isset( $options['show-registration-templates'] ) ? $options['show-registration-templates'] : false;
 	$new_options['registration-templates-appearance'] = isset( $options['registration-templates-appearance'] ) ? $options['registration-templates-appearance'] : '';
-	$new_options['previewer_button_text'] = isset( $options['previewer_button_text'] ) ? $options['previewer_button_text'] : __( 'Select this theme', 'blog_templates' );			  			  	 
+	$new_options['previewer_button_text'] = isset( $options['previewer_button_text'] ) ? $options['previewer_button_text'] : __( 'Select this theme', 'blogtemplates' );			  			  	 
 	$new_options['toolbar-color'] = isset( $options['toolbar-color'] ) ? $options['toolbar-color'] : '#8B8B8B';
 	$new_options['toolbar-text-color'] = isset( $options['toolbar-text-color'] ) ? $options['toolbar-text-color'] : '#FFFFFF';
 	$new_options['toolbar-border-color'] = isset( $options['toolbar-border-color'] ) ? $options['toolbar-border-color'] : '#333333';
@@ -105,14 +107,15 @@ function blog_templates_upgrade_20() {
 		$categories_table = $wpdb->base_prefix . 'nbt_templates_categories';
 		$categories_relationships_table = $wpdb->base_prefix . 'nbt_categories_relationships_table';
 
-		$wpdb->query( "DELETE FROM $categories_table" );
-		$wpdb->query( "DELETE FROM $categories_relationships_table" );
+		$wpdb->query( "DELETE FROM " . esc_sql( $categories_table ) );
+		$wpdb->query( "DELETE FROM " . esc_sql( $categories_relationships_table ) );
 
 		$current_site_id = ! empty ( $current_site ) ? $current_site->id : 1;
 
-		$default_cat = $wpdb->get_row( "SELECT * FROM $categories_table WHERE is_default = 1" );
+		$default_cat = $wpdb->get_row( "SELECT * FROM " . esc_sql( $categories_table ) . " WHERE is_default = 1" );
 
 		if ( ! empty( $default_cat ) ) {
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( "UPDATE $categories_table SET is_default = 0 WHERE is_default = 1 AND ID != $default_cat->ID" );
 		}
 
@@ -121,7 +124,7 @@ function blog_templates_upgrade_20() {
 			$wpdb->insert(
 				$categories_table,
 				array(
-					'name' => __( 'Default category', 'blog_templates' ),
+					'name' => __( 'Default category', 'blogtemplates' ),
 					'description' => '',
 					'is_default' => 1
 				),
@@ -136,36 +139,62 @@ function blog_templates_upgrade_20() {
 
 
 		// check_for_uncategorized_templates
-		$uncategorized_templates = $wpdb->get_results(
-			"SELECT t.ID
-			FROM  $templates_table t
-			LEFT OUTER JOIN $categories_relationships_table ct ON ct.template_id = t.ID
-			WHERE cat_id IS NULL"
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$uncategorized_templates = $wpdb->get_results(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+			$wpdb->prepare(
+				"SELECT t.ID
+				FROM %i t
+				LEFT OUTER JOIN %i ct ON ct.template_id = t.ID
+				WHERE ct.cat_id IS NULL",
+				$templates_table,
+				$categories_relationships_table
+			)
 		);
-
-		if ( ! empty( $uncategorized_templates ) ) {
- 			$default_cat_id = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $categories_table WHERE is_default = '1'", $current_site_id ) );
-			if ( ! empty( $default_cat_id ) ) {
-				foreach ( $uncategorized_templates as $template ) {
-					$wpdb->query( $wpdb->prepare( "DELETE FROM $categories_relationships_table WHERE template_id = %d", $template->ID ) );
+if ( ! empty( $uncategorized_templates ) ) {
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+	$default_cat_id = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM %i WHERE is_default = 1", $categories_table ) );
+if ( ! empty( $default_cat_id ) ) {
+			foreach ( $uncategorized_templates as $template ) {
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+					$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE template_id = %d", $categories_relationships_table, (int) $template->ID ) );
 					$cats = array( $default_cat_id );
 					foreach ( $cats as $cat ) {
-						$query = $wpdb->prepare(
-							"INSERT INTO $categories_relationships_table (cat_id,template_id) VALUES (%d,%d)",
-							$cat,
-							$template->ID
-						);
-						$wpdb->query( $query );
+                        // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+                        $wpdb->query(
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+                            $wpdb->prepare( "INSERT INTO %i (cat_id,template_id) VALUES (%d,%d)", $categories_relationships_table, (int) $cat, (int) $template->ID )
+                        );
 					}
 				}
 			}
 		}
 
-		$templates = $wpdb->get_results( "SELECT cat_id, count(t.ID) the_count FROM $templates_table t
-			JOIN $categories_relationships_table r ON r.template_id = t.ID
-			GROUP BY cat_id" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
+		
+	$templates = $wpdb->get_results(
 
-		if ( ! empty( $templates ) ) {
+// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is valid since WP 6.2; plugin requires WP 6.2+.
+		$wpdb->prepare(
+
+			"SELECT r.cat_id, COUNT(t.ID) AS the_count
+
+			FROM %i t
+
+			JOIN %i r ON r.template_id = t.ID
+
+			GROUP BY r.cat_id",
+
+			$templates_table,
+
+			$categories_relationships_table
+
+		)
+
+	);
+if ( ! empty( $templates ) ) {
 			foreach ( $templates as $template ) {
 				$wpdb->update(
 					$categories_table,
@@ -203,6 +232,7 @@ function blog_templates_upgrade_22() {
 
 	dbDelta($sql);
 
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 	$results = $wpdb->get_results( "SELECT * FROM $templates_table" );
 
 	if ( ! empty( $results ) ) {
@@ -247,6 +277,6 @@ function blog_templates_upgrade_262() {
 
 	// remove all main sites. This is a solution for Edublogs/CampusPress more than WPMUDEV, but just in case :)
 	$main_blog_id = BLOG_ID_CURRENT_SITE;
-	$wpdb->query( "DELETE FROM $templates_table WHERE blog_id = $main_blog_id" );
+	$wpdb->query( $wpdb->prepare( "DELETE FROM " . esc_sql( $templates_table ) . " WHERE blog_id = %d", $main_blog_id ) );
 
 }

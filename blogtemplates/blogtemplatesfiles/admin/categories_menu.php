@@ -27,36 +27,41 @@ class blog_templates_categories_menu {
      * @since 1.2.1
      */
     function network_admin_page() {
-        $this->page_id = add_submenu_page( 'blog_templates_main', __( 'Template categories', 'blog_templates' ), __( 'Template categories', 'blog_templates' ), 'manage_network', $this->menu_slug, array($this,'render_page'));
+        $this->page_id = add_submenu_page( 'blog_templates_main', __( 'Template categories', 'blogtemplates' ), __( 'Template categories', 'blogtemplates' ), 'manage_network', $this->menu_slug, array($this,'render_page'));
     }
 
     public function render_page() {
 
     	if ( ! empty( $this->errors ) ) {
     		?>
-				<div class="error"><p><?php echo $this->errors; ?></p></div>
+				<div class="error"><p><?php echo wp_kses_post( $this->errors ); ?></p></div>
     		<?php
     	}
-    	elseif ( isset( $_GET['updated'] ) ) {
+    	elseif ( isset( $_GET['updated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
     		?>
 				<div class="updated">
-					<p><?php _e( 'Changes have been applied', 'blog_templates' ); ?></p>
+					<p><?php esc_html_e( 'Changes have been applied', 'blogtemplates' ); ?></p>
 				</div>
     		<?php
     	}
     	?>
 			<div class="wrap">
-				<?php screen_icon( 'blogtemplates' ); ?>
-				<h2><?php echo get_admin_page_title(); ?></h2>
+				
+				<h2><?php echo esc_html( get_admin_page_title() ); ?></h2>
 
-				<?php if ( isset( $_GET['action'] ) && 'edit' == $_GET['action'] && isset( $_GET['category'] ) && $cat_id = absint( $_GET['category'] ) ): ?>
+								<?php
+				$action   = isset( $_GET['action'] ) ? sanitize_text_field( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$cat_id   = isset( $_GET['category'] ) ? absint( wp_unslash( $_GET['category'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				if ( 'edit' === $action && $cat_id ) :
+				?>
+
 
 					<?php
 						$model = nbt_get_model();
 						$category = $model->get_template_category( $cat_id );
 
 						if ( ! $category )
-							wp_die( __( 'The category does not exist', 'blog_templates' ) );
+							wp_die( esc_html__( 'The category does not exist', 'blogtemplates' ) );
 
 					?>
 					<form id="categories-table-form" action="" method="post">
@@ -66,7 +71,7 @@ class blog_templates_categories_menu {
 							?>
 								<input type="text" name="cat_name" class="large-text" value="<?php echo esc_attr( $category['name'] ); ?>">
 							<?php
-								$this->render_row( __( 'Category name', 'blog_templates' ), ob_get_clean() );
+								$this->render_row( __( 'Category name', 'blogtemplates' ), ob_get_clean() );
 							?>
 
 							<?php
@@ -74,7 +79,7 @@ class blog_templates_categories_menu {
 							?>
 								<textarea name="cat_description" rows="5" cols="50" class="large-text"><?php echo esc_textarea( $category['description'] ); ?></textarea>
 							<?php
-								$this->render_row( __( 'Category description', 'blog_templates' ), ob_get_clean() );
+								$this->render_row( __( 'Category description', 'blogtemplates' ), ob_get_clean() );
 							?>
 						</table>
 						<input type="hidden" name="cat_id" value="<?php echo esc_attr( $cat_id ); ?>">
@@ -101,20 +106,20 @@ class blog_templates_categories_menu {
 						<div id="col-left">
 							<div class="col-wrap">
 								<div class="form-wrap">
-									<h3><?php _e( 'Add new category', 'blog_templates' ); ?></h3>
+									<h3><?php esc_html_e( 'Add new category', 'blogtemplates' ); ?></h3>
 									<form id="categories-table-form" action="" method="post">
 										<?php wp_nonce_field( 'add-nbt-category' ); ?>
 										<div class="form-field">
-											<label for="cat_name"><?php _e( 'Category Name', 'blog_templates' ); ?>
-												<input name="cat_name" id="cat_name" type="text" value="<?php echo $this->current_category['name']; ?>" size="40" aria-required="true">
+											<label for="cat_name"><?php esc_html_e( 'Category Name', 'blogtemplates' ); ?>
+												<input name="cat_name" id="cat_name" type="text" value="<?php echo esc_attr( $this->current_category['name'] ); ?>" size="40" aria-required="true">
 											</label>
 										</div>
 										<div class="form-field">
-											<label for="cat_description"><?php _e( 'Category Description', 'blog_templates' ); ?>
+											<label for="cat_description"><?php esc_html_e( 'Category Description', 'blogtemplates' ); ?>
 												<textarea name="cat_description" rows="5" cols="40"><?php echo esc_textarea( $this->current_category['description'] ); ?></textarea>
 											</label>
 										</div>
-										<?php submit_button( __( 'Add New Category', 'blog_templates' ), 'primary', 'submit-nbt-new-category' ); ?>
+										<?php submit_button( __( 'Add New Category', 'blogtemplates' ), 'primary', 'submit-nbt-new-category' ); ?>
 									</form>
 								</div>
 							</div>
@@ -128,52 +133,67 @@ class blog_templates_categories_menu {
 
 	public function validate_form() {
 		if ( isset( $_POST['submit-edit-nbt-category'] ) ) {
-			if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'edit-nbt-category' ) )
-				wp_die( __( 'Security check error', 'blog_templates' ) );
+			$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+			if ( ! $nonce || ! wp_verify_nonce( $nonce, 'edit-nbt-category' ) ) {
+				wp_die( esc_html__( 'Security check error', 'blogtemplates' ) );
+			}
 
-			if ( isset( $_POST['cat_name'] ) && ! empty( $_POST['cat_name'] ) && isset( $_POST['cat_id'] ) ) {
+			if ( isset( $_POST['cat_name'], $_POST['cat_id'] ) && ! empty( $_POST['cat_name'] ) ) {
 				$model = nbt_get_model();
 
-				$description = stripslashes( preg_replace('~<\s*\bscript\b[^>]*>(.*?)<\s*\/\s*script\s*>~is', '', $_POST['cat_description'] ) );
-				$name = sanitize_text_field( stripslashes_deep( $_POST['cat_name'] ) );
-				$model->update_template_category( absint( $_POST['cat_id'] ), $name, $description );
+				$description = isset( $_POST['cat_description'] ) ? wp_kses_post( wp_unslash( $_POST['cat_description'] ) ) : '';
+
+				$name = sanitize_text_field( wp_unslash( $_POST['cat_name'] ) );
+				$cat_id = isset( $_POST['cat_id'] ) ? absint( wp_unslash( $_POST['cat_id'] ) ) : 0;
+
+				if ( $cat_id > 0 ) {
+					$model->update_template_category( $cat_id, $name, $description );
+				}
 
 				$link = remove_query_arg( array( 'action', 'category' ) );
 				$link = add_query_arg( 'updated', 'true', $link );
-				wp_redirect( $link );
+				wp_safe_redirect( $link );
+				exit;
 			}
 			else {
-				$this->errors = __( 'Name cannot be empty', 'blog_templates' );
+				$this->errors = esc_html__( 'Name cannot be empty', 'blogtemplates' );
 			}
 		}
 
 		if ( isset( $_POST['submit-nbt-new-category'] ) ) {
-			if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'add-nbt-category' ) )
-				wp_die( __( 'Security check error', 'blog_templates' ) );
+    $nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+    if ( ! $nonce || ! wp_verify_nonce( $nonce, 'add-nbt-category' ) ) {
+        wp_die( esc_html__( 'Security check error', 'blogtemplates' ) );
+    }
 
-			$model = nbt_get_model();
+    $model = nbt_get_model();
 
-			$description = stripslashes( preg_replace('~<\s*\bscript\b[^>]*>(.*?)<\s*\/\s*script\s*>~is', '', $_POST['cat_description'] ) );
-			$name = sanitize_text_field( stripslashes_deep( $_POST['cat_name'] ) );
+    $description = isset( $_POST['cat_description'] ) ? wp_kses_post( wp_unslash( $_POST['cat_description'] ) ) : '';
 
-			if ( ! empty( $name ) ) {
-				$model->add_template_category( $name, $description );
-				$link = remove_query_arg( array( 'action', 'category' ) );
-				$link = add_query_arg( 'updated', 'true', $link );
-				wp_redirect( $link );
-			}
-			else {
-				$this->errors = __( 'Name cannot be empty', 'blog_templates' );
-			}
-		}
+    $name = isset( $_POST['cat_name'] ) ? sanitize_text_field( wp_unslash( $_POST['cat_name'] ) ) : '';
+
+    if ( ! empty( $name ) ) {
+        $model->add_template_category( $name, $description );
+        $link = remove_query_arg( array( 'action', 'category' ) );
+        $link = add_query_arg( 'updated', 'true', $link );
+        wp_safe_redirect( $link );
+        exit;
+    } else {
+        $this->errors = esc_html__( 'Name cannot be empty', 'blogtemplates' );
+    }
+}
 	}
 
 	private function render_row( $title, $markup ) {
 		?>
 			<tr valign="top">
-				<th scope="row"><label for="site_name"><?php echo $title; ?></label></th>
+				<th scope="row"><label for="site_name"><?php echo esc_html( $title ); ?></label></th>
 				<td>
-					<?php echo $markup; ?>
+					<?php
+			// The markup for this row is composed locally in this file and its dynamic values are escaped individually.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo $markup;
+		?>
 				</td>
 			</tr>
 		<?php

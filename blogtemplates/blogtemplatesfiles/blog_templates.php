@@ -64,18 +64,26 @@ if ( ! class_exists( 'blog_templates' ) ) {
             add_action( 'admin_enqueue_scripts', array( &$this, 'enqueue_styles' ) );
 
 
-            do_action( 'nbt_object_create', $this );
+            do_action( 'nbtpl_object_create', $this );
+
+            if ( function_exists( 'do_action_deprecated' ) ) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                do_action_deprecated( 'nbt_object_create', array( $this ), '3.0.3', 'nbtpl_object_create' );
+            } else {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                do_action( 'nbt_object_create', $this );
+            }
         }
 
         public function enqueue_styles() {
             global $wp_version;
 
             if ( version_compare( $wp_version, '3.8', '>=' ) ) {
-                wp_enqueue_style( 'mcc-icons', NBT_PLUGIN_URL . 'blogtemplatesfiles/assets/css/icons-38.css' );
-            }
+                wp_enqueue_style( 'mcc-icons', NBTPL_PLUGIN_URL . 'blogtemplatesfiles/assets/css/icons-38.css', array(), NBTPL_PLUGIN_VERSION );
+}
             else {
-                wp_enqueue_style( 'mcc-icons', NBT_PLUGIN_URL . 'blogtemplatesfiles/assets/css/icon-styles.css' );
-            }
+                wp_enqueue_style( 'mcc-icons', NBTPL_PLUGIN_URL . 'blogtemplatesfiles/assets/css/icon-styles.css', array(), NBTPL_PLUGIN_VERSION );
+}
         }
 
         public function init() {
@@ -100,10 +108,10 @@ if ( ! class_exists( 'blog_templates' ) ) {
             if ( ! $saved_version )
                 $saved_version = '1.7.2';
 
-            if ( $saved_version == NBT_PLUGIN_VERSION )
+            if ( $saved_version == NBTPL_PLUGIN_VERSION )
                 return;
 
-            require_once( NBT_PLUGIN_DIR . 'blogtemplatesfiles/upgrade.php' );
+            require_once( NBTPL_PLUGIN_DIR . 'blogtemplatesfiles/upgrade.php' );
 
             if ( version_compare( $saved_version, '1.7.2', '<=' ) ) {
                 $options = get_site_option( 'blog_templates_options', array( 'templates' => array() ) );
@@ -216,7 +224,8 @@ if ( ! class_exists( 'blog_templates' ) ) {
                     $settings_url = add_query_arg( 'page', 'blog_templates_main', network_admin_url( 'settings.php' ) );
                     ?>
                         <div class="error">
-                            <p><?php printf( __( '<strong>New Blog Templates alert:</strong> The main site cannot be templated from 1.7.1 version, please <a href="%s">go to settings page</a> and remove that template (will not be shown as a choice from now on)', 'blog_templates' ), $settings_url ); ?></p>
+                        <?php /* translators: %s: URL to the New Blog Templates settings page. */ ?>
+                        <p><?php printf( wp_kses_post( __( '<strong>New Blog Templates alert:</strong> The main site cannot be templated from 1.7.1 version, please <a href="%s">go to settings page</a> and remove that template (will not be shown as a choice from now on)', 'blogtemplates' ) ), esc_url( $settings_url ) ); ?></p>
                         </div>
                     <?php
                 }
@@ -227,15 +236,17 @@ if ( ! class_exists( 'blog_templates' ) ) {
 			?>
 			<table class="form-table">
 				<tr class="form-field form-required">
-					<th scope="row"><label for="blog-template"><?php _e( 'Template' ) ?></label></th>
+					<th scope="row"><label for="blog-template"><?php esc_html_e( 'Template', 'blogtemplates' ); ?></label></th>
 					<td>
-						<?php $this->get_template_dropdown('blog_template_admin', true ); ?>
+						<?php
+							$this->get_template_dropdown( 'blog_template_admin', true );
+							wp_nonce_field( 'nbt_select_template', 'nbt_select_template_nonce' );
+						?>
 					</td>
 				</tr>
 			</table>
 			<?php
 		}
-
         /**
         * Returns a dropdown of all blog templates
         *
@@ -254,7 +265,7 @@ if ( ! class_exists( 'blog_templates' ) ) {
             if ( is_array( $templates ) ) {
                 $selector .= '<select name="' . esc_attr( $tag_name ) . '" id="' . esc_attr( $tag_name ) . '">';
                 if ( $include_none )
-                    $selector .= '<option value="none">' . __( 'None', 'blog_templates' ) . '</option>';
+                    $selector .= '<option value="none">' . __( 'None', 'blogtemplates' ) . '</option>';
 
                 foreach ( $templates as $key => $value ) {
                     $label = ( $esc_js ) ? esc_js( $value ) : stripslashes_deep( $value );
@@ -265,7 +276,7 @@ if ( ! class_exists( 'blog_templates' ) ) {
             }
 
             if ( $echo )
-                echo $selector;
+                echo wp_kses_post( $selector );
             else
                 return $selector;
         }
@@ -312,31 +323,52 @@ if ( ! class_exists( 'blog_templates' ) ) {
             // Check $_POST first for passed template and use that, if present.
             // Otherwise, check passed meta from blog signup.
             // Lastly, apply the default.
-            if ( isset( $_POST['blog_template_admin'] ) && is_network_admin() ) {
+            if ( isset( $_POST['blog_template_admin'] ) && is_network_admin() ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
                 // The blog is being created from the admin network.
-                // The super admin can create a blog without a template
-                if ( 'none' === $_POST['blog_template_admin'] ) {
-                    // The Super Admin does not want to use any template
+                // The super admin can create a blog without a template.
+                $blog_template_admin_raw = wp_unslash( $_POST['blog_template_admin'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                $blog_template_admin     = sanitize_text_field( $blog_template_admin_raw );
+
+                if ( 'none' === $blog_template_admin ) {
+                    // The Super Admin does not want to use any template.
                     return;
+                } elseif ( isset( $settings['templates'][ $blog_template_admin ] ) ) {
+                    $template = $settings['templates'][ $blog_template_admin ];
                 }
-                else {
-                    $template = $settings['templates'][$_POST['blog_template_admin']];
+            } elseif ( isset( $_POST['blog_template'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                // The blog template was selected in the signup or Add Site form.
+                $blog_template_raw = wp_unslash( $_POST['blog_template'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                $blog_template     = sanitize_text_field( $blog_template_raw );
+                if ( isset( $settings['templates'][ $blog_template ] ) ) {
+                    $template = $settings['templates'][ $blog_template ];
                 }
-            }
-            elseif ( isset( $_POST['blog_template'] ) && is_numeric( $_POST['blog_template'] ) ) { //If they've chosen a template, use that. For some reason, when PHP gets 0 as a posted var, it doesn't recognize it as is_numeric, so test for that specifically
-                $template = $settings['templates'][$_POST['blog_template']];
-            } elseif ($_passed_meta && isset($_passed_meta['blog_template']) && is_numeric($_passed_meta['blog_template'])) { // Do we have a template in meta?
-                $template = $settings['templates'][$_passed_meta['blog_template']]; // Why, yes. Yes, we do. Use that.
-            } elseif ( $default ) { //If they haven't chosen a template, use the default if it exists
+            } elseif ( $_passed_meta && isset( $_passed_meta['blog_template'] ) && isset( $settings['templates'][ $_passed_meta['blog_template'] ] ) ) {
+                // Do we have a template in meta?
+                $template = $settings['templates'][ $_passed_meta['blog_template'] ];
+            } elseif ( $default ) {
+                // If they haven't chosen a template, use the default if it exists.
                 $template = $default;
             }
-            $template = apply_filters('blog_templates-blog_template', $template, $blog_id, $user_id );
-            if ( ! $template || 'none' == $template )
-                return; //No template, lets leave
-
-            switch_to_blog( $blog_id ); //Switch to the blog that was just created
 
             include_once( 'copier.php' );
+
+            // Ensure we have a valid template array before attempting to copy.
+            if ( empty( $template ) ) {
+                // No template has been resolved (no selection and no default).
+                // In this case, there is nothing for the copier to do, so bail early.
+                return;
+            }
+
+            if ( ! is_array( $template ) ) {
+                // Some older integrations or filters may still pass a template key
+                // rather than the full template array. Attempt to resolve that.
+                if ( is_string( $template ) && isset( $settings['templates'][ $template ] ) ) {
+                    $template = $settings['templates'][ $template ];
+                } else {
+                    // We still do not have a valid template array; abort safely.
+                    return;
+                }
+            }
 
             $copier_args = array();
             foreach( $template['to_copy'] as $value ) {
@@ -351,7 +383,15 @@ if ( ! class_exists( 'blog_templates' ) ) {
             $copier_args['additional_tables'] = ( isset( $template['additional_tables'] ) && is_array( $template['additional_tables'] ) ) ? $template['additional_tables'] : array();
             $source_blog_id = $template['blog_id'];
 
-            $classname = apply_filters( 'nbt_copier_classname', 'NBT_Template_copier' );
+            $classname = apply_filters( 'nbtpl_copier_classname', 'NBTPL_Template_Copier' );
+
+            if ( function_exists( 'apply_filters_deprecated' ) ) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                $classname = apply_filters_deprecated( 'nbt_copier_classname', array( $classname ), '3.0.3', 'nbtpl_copier_classname' );
+            } else {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                $classname = apply_filters( 'nbt_copier_classname', $classname );
+            }
 
             if ( class_exists( $classname ) ) {
                 // Instantiate the copier with positional arguments to avoid PHP 8 named-parameter issues.
@@ -376,18 +416,19 @@ if ( ! class_exists( 'blog_templates' ) ) {
                 return false;
             ?>
             <tr>
-                <th scope="row"><label for="blog_template"><?php _e( 'Default Blog Template', 'blog_templates' ) ?>:</label></th>
+                <th scope="row"><label for="blog_template"><?php esc_html_e( 'Default Blog Template', 'blogtemplates' ); ?>:</label></th>
                 <td>
                     <select id="blog_template" name="blog_template">
-                        <option value=""><?php _e( 'Default', 'blog_templates' ); ?></option>
+                        <option value=""><?php esc_html_e( 'Default', 'blogtemplates' ); ?></option>
                         <?php
                         foreach( $settings['templates'] as $key => $blog_template ) {
                             $selected = isset( $domain['blog_template'] ) ? selected( $key, $domain['blog_template'], false ) : '';
-                            echo "<option value='$key'$selected>$blog_template[name]</option>";
+                            $selected_attr = $selected ? ' selected="selected"' : '';
+                            printf( '<option value="%1$s"%2$s>%3$s</option>', esc_attr( $key ), esc_attr( $selected_attr ), esc_html( $blog_template['name'] ) );
                         }
                         ?>
                     </select><br />
-                    <span class="description"><?php _e( 'Default Blog Template used for this domain.', 'blog_templates' ) ?></span>
+                    <span class="description"><?php esc_html_e( 'Default Blog Template used for this domain.', 'blogtemplates' ); ?></span>
                 </td>
             </tr>
             <?php
@@ -414,7 +455,7 @@ if ( ! class_exists( 'blog_templates' ) ) {
         * @since 1.2
         */
         function manage_multi_domains_columns( $columns ) {
-            $columns['blog_template'] = __( 'Blog Template', 'blog_templates' );
+            $columns['blog_template'] = __( 'Blog Template', 'blogtemplates' );
             return $columns;
         }
 
@@ -432,7 +473,7 @@ if ( ! class_exists( 'blog_templates' ) ) {
                     echo 'Default';
                 } else {
                     $key = $domain['blog_template'];
-                    echo $settings['templates'][$key]['name'];
+                    echo esc_html( $settings['templates'][ $key ]['name'] );
                 }
             }
         }
@@ -442,8 +483,13 @@ if ( ! class_exists( 'blog_templates' ) ) {
 
         function maybe_add_template_hidden_field() {
             $settings = nbt_get_settings();
-            if ( 'page_showcase' == $settings['registration-templates-appearance'] ) {
-                if ( isset( $_REQUEST['blog_template'] ) && 'just_user' == $_REQUEST['blog_template'] ) {
+            if ( 'page_showcase' === $settings['registration-templates-appearance'] ) {
+                $blog_template_request = filter_input( INPUT_GET, 'blog_template', FILTER_SANITIZE_STRING );
+
+                // Always add a nonce so that subsequent processing of blog_template can be verified.
+                wp_nonce_field( 'nbt_select_template', 'nbt_select_template_nonce' );
+
+                if ( 'just_user' === $blog_template_request ) {
                     ?>
                         <input type="text" name="blog_template" value="just_user">
                         <script>
@@ -455,16 +501,16 @@ if ( ! class_exists( 'blog_templates' ) ) {
                             });
                         </script>
                     <?php
-                }
-                else {
-                    $value = isset( $_REQUEST['blog_template'] ) ? $_REQUEST['blog_template'] : '';
+                } else {
+                    $value = absint( $blog_template_request );
                     ?>
-                        <input type="hidden" name="blog_template" value="<?php echo absint( $value ); ?>">
+                        <input type="hidden" name="blog_template" value="<?php echo esc_attr( $value ); ?>">
                     <?php
                 }
                 return;
             }
         }
+
         /**
          * Shows template selection on registration.
          */
@@ -499,15 +545,24 @@ if ( ! class_exists( 'blog_templates' ) ) {
 
             // Setup theme file
             $theme_file = locate_template( array( $tpl_file ) );
-            $theme_file = $theme_file ? $theme_file : NBT_PLUGIN_DIR . '/blogtemplatesfiles/template/' . $tpl_file;
+            $theme_file = $theme_file ? $theme_file : NBTPL_PLUGIN_DIR . '/blogtemplatesfiles/template/' . $tpl_file;
 
             if ( ! file_exists( $theme_file ) )
                 return false;
 
             nbt_render_theme_selection_scripts( $settings );
 
-            $templates = apply_filters( 'nbt_signup_templates', $templates );
+            $templates = apply_filters( 'nbtpl_signup_templates', $templates );
 
+            if ( function_exists( 'apply_filters_deprecated' ) ) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                $templates = apply_filters_deprecated( 'nbt_signup_templates', array( $templates ), '3.0.3', 'nbtpl_signup_templates' );
+            } else {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                $templates = apply_filters( 'nbt_signup_templates', $templates );
+            }
+            // Provide prefixed variables for template partials (keeps template naming-compliance without breaking includes).
+            $nbtpl_templates = $templates;
             @include $theme_file;
 
         }
@@ -515,14 +570,19 @@ if ( ! class_exists( 'blog_templates' ) ) {
         /**
          * Store selected template in blog meta on signup.
          */
-        function registration_template_selection_add_meta ($meta) {
-            $meta = $meta ? $meta : array();
+        function registration_template_selection_add_meta( $meta ) {
+            $meta     = $meta ? $meta : array();
             $settings = nbt_get_settings();
-            $meta['blog_template'] = isset( $_POST['blog_template'] ) && is_numeric( $_POST['blog_template'] ) ? $_POST['blog_template'] : $settings['default'];
+
+            $blog_template_signup = '';
+            if ( isset( $_POST['blog_template'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                $blog_template_signup_raw = wp_unslash( $_POST['blog_template'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                $blog_template_signup     = sanitize_text_field( $blog_template_signup_raw );
+            }
+
+            $meta['blog_template'] = ( '' !== $blog_template_signup ) ? $blog_template_signup : $settings['default'];
             return $meta;
         }
-
-
 
 
         /**
@@ -532,15 +592,25 @@ if ( ! class_exists( 'blog_templates' ) ) {
             function register_admin_menus() {
                 if ( is_network_admin() ) {
                     // Load Network Admin menu class files explicitly
-                 require_once( NBT_PLUGIN_DIR . 'blogtemplatesfiles/admin/main_menu.php' );
-                    require_once( NBT_PLUGIN_DIR . 'blogtemplatesfiles/admin/categories_menu.php' );
-                    require_once( NBT_PLUGIN_DIR . 'blogtemplatesfiles/admin/settings_menu.php' );
+                 require_once( NBTPL_PLUGIN_DIR . 'blogtemplatesfiles/admin/main_menu.php' );
+                    require_once( NBTPL_PLUGIN_DIR . 'blogtemplatesfiles/admin/categories_menu.php' );
+                    require_once( NBTPL_PLUGIN_DIR . 'blogtemplatesfiles/admin/settings_menu.php' );
 
                  // Create menu objects and register their pages immediately.
                  $main_menu = new blog_templates_main_menu();
                  $main_menu->network_admin_page();
 
-                    if ( apply_filters( 'nbt_activate_categories_feature', true ) ) {
+                    $nbtpl_activate_categories_feature = apply_filters( 'nbtpl_activate_categories_feature', true );
+
+                    if ( function_exists( 'apply_filters_deprecated' ) ) {
+                        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                        $nbtpl_activate_categories_feature = apply_filters_deprecated( 'nbt_activate_categories_feature', array( $nbtpl_activate_categories_feature ), '3.0.3', 'nbtpl_activate_categories_feature' );
+                    } else {
+                        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+                        $nbtpl_activate_categories_feature = apply_filters( 'nbt_activate_categories_feature', $nbtpl_activate_categories_feature );
+                    }
+
+                    if ( $nbtpl_activate_categories_feature ) {
                         $categories_menu = new blog_templates_categories_menu();
                         $categories_menu->network_admin_page();
                     }
@@ -581,4 +651,3 @@ if ( ! class_exists( 'blog_templates' ) ) {
     $blog_templates = new blog_templates();
 
 } // End if blog_templates class exists statement
-

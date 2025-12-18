@@ -80,15 +80,15 @@ function blog_template_contact_form7_postmeta ($row, $table) {
 	return $row;
 }
 function blog_template_convert_wpcf7_mail_fields ($row) {
-	global $_blog_template_current_templated_blog_id;
-	if (!$_blog_template_current_templated_blog_id) return $row; // Can't do the replacement
+	global $nbtpl_blog_template_current_templated_blog_id;
+	if (!$nbtpl_blog_template_current_templated_blog_id) return $row; // Can't do the replacement
 
 	$value = @$row['meta_value'];
 	$wpcf7 = $value ? unserialize($value) : false;
 	if (!$wpcf7) return $row; // Something went wrong
 
 	// Get convertable values
-	switch_to_blog($_blog_template_current_templated_blog_id);
+	switch_to_blog($nbtpl_blog_template_current_templated_blog_id);
 	$admin_email = get_option("admin_email");
 	$site_url = get_bloginfo('url');
 	// ... more stuff at some point
@@ -107,12 +107,13 @@ function blog_template_convert_wpcf7_mail_fields ($row) {
 	}
 
 	// Right, so now we have the replaced array - populate it.
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Not a query; array key from postmeta row data.
 	$row['meta_value'] = serialize($wpcf7);
 	return $row;
 }
 function blog_template_check_postmeta ($tbl, $templated_blog_id) {
-	global $_blog_template_current_templated_blog_id;
-	$_blog_template_current_templated_blog_id = $templated_blog_id;
+	global $nbtpl_blog_template_current_templated_blog_id;
+	$nbtpl_blog_template_current_templated_blog_id = $templated_blog_id;
 	if ("postmeta" == $tbl) add_filter('blog_templates-process_row', 'blog_template_contact_form7_postmeta', 10, 2);
 }
 add_action('blog_templates-copying_table', 'blog_template_check_postmeta', 10, 2);
@@ -147,9 +148,18 @@ add_action('blog_templates-copy-after_copying', 'blog_template_add_user_as_admin
  * Optionally transfer post ownership to the new or predefined user ID.
  */
 function blog_template_reassign_post_authors ( $template, $blog_id, $user_id ) {
-    if ( empty($template['to_copy']['users']) ) {
+	if ( empty( $template['to_copy']['users'] ) ) {
 		global $wpdb;
-		$wpdb->query($wpdb->prepare( "UPDATE {$wpdb->posts} SET post_author=%d", $user_id ) );
+
+		// Bulk-reassign all posts/pages to the new user when user copying is disabled.
+		// This runs only during template copy and intentionally updates every row in the posts table.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->posts} SET post_author = %d",
+				$user_id
+			)
+		);
 	}
 }
 add_action('blog_templates-copy-posts', 'blog_template_reassign_post_authors', 10, 3);

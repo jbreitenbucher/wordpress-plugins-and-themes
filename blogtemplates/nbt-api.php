@@ -1,6 +1,6 @@
 <?php
 
-function nbt_load_api() {
+function nbtpl_load_api() {
 	$plugin_dir = plugin_dir_path( __FILE__ );
 	require_once( $plugin_dir . '/blogtemplatesfiles/model.php' );
 	require_once( $plugin_dir . '/blogtemplatesfiles/helpers.php' );
@@ -35,12 +35,38 @@ function nbt_load_api() {
  *
  * @return type
  */
-function nbt_api_copy_contents_to_new_blog( $source_blog_id, $new_blog_id, $new_user_id, $args ) {
-	nbt_load_api();
+function nbtpl_api_copy_contents_to_new_blog( $source_blog_id, $new_blog_id, $new_user_id, $args ) {
+	nbtpl_load_api();
 	$copier = new NBT_Template_copier( $source_blog_id, $new_blog_id, $new_user_id, $args );
 	$copier->execute();
 }
 
+
+
+if ( ! function_exists( 'nbt_load_api' ) ) {
+	/**
+	 * @deprecated 3.0.3 Use nbtpl_load_api()
+	 */
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	function nbt_load_api() {
+		nbtpl_load_api();
+	}
+}
+
+if ( ! function_exists( 'nbt_api_copy_contents_to_new_blog' ) ) {
+	/**
+	 * @deprecated 3.0.3 Use nbtpl_api_copy_contents_to_new_blog()
+	 *
+	 * @param int   $source_blog_id Source blog ID.
+	 * @param int   $new_blog_id    Destination blog ID.
+	 * @param int   $new_user_id    New user ID.
+	 * @param array $args           Copy args.
+	 */
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	function nbt_api_copy_contents_to_new_blog( $source_blog_id, $new_blog_id, $new_user_id, $args = array() ) {
+		return nbtpl_api_copy_contents_to_new_blog( $source_blog_id, $new_blog_id, $new_user_id, $args );
+	}
+}
 
 /**
  * Sample code
@@ -49,7 +75,7 @@ function nbt_api_copy_contents_to_new_blog( $source_blog_id, $new_blog_id, $new_
  * the dates of the posts and pages
  *
 include_once( WP_CONTENT_DIR . '/plugins/blogtemplates/nbt-api.php' );
-nbt_load_api();
+nbtpl_load_api();
 
 add_action( 'wpmu_new_blog', 'my_test_function', 99, 2 );
 function my_test_function( $new_blog_id, $new_user_id ) {
@@ -61,6 +87,6 @@ function my_test_function( $new_blog_id, $new_user_id ) {
 			),
             'update_dates' => true
 		);
-	nbt_api_copy_contents_to_new_blog( 27, $new_blog_id, $new_user_id, $args );
+	nbtpl_api_copy_contents_to_new_blog( 27, $new_blog_id, $new_user_id, $args );
 }
 */

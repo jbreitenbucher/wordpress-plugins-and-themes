@@ -26,7 +26,7 @@ This version fixes long-standing issues with deprecated functions, Network Admin
 | Component | Minimum |
 |----------|---------|
 | WordPress | 6.8 (Multisite) |
-| PHP | 7.4 (tested through 8.3) |
+| PHP | 8.0 (tested through 8.3) |
 | Database | MySQL / MariaDB supported by core WP |
 
 This plugin **only applies** to networks where site creation is enabled.

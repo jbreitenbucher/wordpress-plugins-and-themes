@@ -4,7 +4,7 @@
 
 include_once( 'integration/gravity-forms.php' );
 
-function nbt_add_membership_caps( $user_id, $blog_id ) {
+function nbtpl_add_membership_caps( $user_id, $blog_id ) {
 	switch_to_blog( $blog_id );
 	$user = get_userdata( $user_id );
 	$user->add_cap('membershipadmin');
@@ -24,7 +24,7 @@ function nbt_add_membership_caps( $user_id, $blog_id ) {
 	restore_current_blog();
 }
 
-function nbt_bp_add_register_scripts() {
+function nbtpl_bp_add_register_scripts() {
 	?>
 	<script>
 		jQuery(document).ready(function($) {
@@ -35,8 +35,8 @@ function nbt_bp_add_register_scripts() {
 	<?php
 }
 
-add_action( 'plugins_loaded', 'nbt_appplus_unregister_action' );
-function nbt_appplus_unregister_action() {
+add_action( 'plugins_loaded', 'nbtpl_appplus_unregister_action' );
+function nbtpl_appplus_unregister_action() {
 	if ( class_exists('Appointments' ) ) {
 		global $appointments;
 		remove_action( 'wpmu_new_blog', array( $appointments, 'new_blog' ), 10, 6 );
@@ -45,8 +45,8 @@ function nbt_appplus_unregister_action() {
 
 
 // Framemarket theme
-add_filter( 'framemarket_list_shops', 'nbt_framemarket_list_shops' );
-function nbt_framemarket_list_shops( $blogs ) {
+add_filter( 'framemarket_list_shops', 'nbtpl_framemarket_list_shops' );
+function nbtpl_framemarket_list_shops( $blogs ) {
 	$return = array();
 
 	if ( ! empty( $blogs ) ) {
@@ -60,8 +60,8 @@ function nbt_framemarket_list_shops( $blogs ) {
 	return $return;
 }
 
-add_filter( 'blogs_directory_blogs_list', 'nbt_remove_blogs_from_directory' );
-function nbt_remove_blogs_from_directory( $blogs ) {
+add_filter( 'blogs_directory_blogs_list', 'nbtpl_remove_blogs_from_directory' );
+function nbtpl_remove_blogs_from_directory( $blogs ) {
 	$model = nbt_get_model();
 	$new_blogs = array();
 	foreach ( $blogs as $blog ) {
@@ -72,18 +72,18 @@ function nbt_remove_blogs_from_directory( $blogs ) {
 }
 
 /** AUTOBLOG **/
-add_action( 'blog_templates-copy-options', 'nbt_copy_autoblog_feeds' );
-function nbt_copy_autoblog_feeds( $template ) {
+add_action( 'blog_templates-copy-options', 'nbtpl_copy_autoblog_feeds' );
+function nbtpl_copy_autoblog_feeds( $template ) {
 	global $wpdb;
 
 	// Site ID, blog ID...
 	$current_site = get_current_site();
-	$current_site_id = $current_site->id;
+	$current_site_id = absint( $current_site->id );
 
 	if ( ! isset( $template['blog_id'] ) )
 		return;
 
-	$source_blog_id = $template['blog_id'];
+	$source_blog_id = absint( $template['blog_id'] );
 	$autoblog_on = false;
 
 	switch_to_blog( $source_blog_id );
@@ -105,7 +105,24 @@ function nbt_copy_autoblog_feeds( $template ) {
 
 	// Getting all the feed data for the source blog ID
 	$autoblog_table = $wpdb->base_prefix . 'autoblog';
-	$results = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $autoblog_table WHERE blog_id = %d AND site_id = %d", $source_blog_id, $current_site_id ) );
+
+	// Cache the source feed rows to avoid repeated scans during a single copy operation.
+	$cache_key = 'nbt_autoblog_feeds_' . $current_site_id . '_' . $source_blog_id;
+	$results   = wp_cache_get( $cache_key, 'blogtemplates' );
+	if ( false === $results ) {
+		// $autoblog_table is derived from $wpdb->base_prefix and a fixed suffix; no user input is involved.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table; no core API exists.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnsupportedIdentifierPlaceholder -- %i is supported since WP 6.2; plugin requires 6.2+.
+				'SELECT * FROM %i WHERE blog_id = %d AND site_id = %d',
+				$autoblog_table,
+				$source_blog_id,
+				$current_site_id
+			)
+		);
+		wp_cache_set( $cache_key, $results, 'blogtemplates', 5 * MINUTE_IN_SECONDS );
+	}
 
 	if ( ! empty( $results ) ) {
 		$current_blog_id = get_current_blog_id();
@@ -125,6 +142,7 @@ function nbt_copy_autoblog_feeds( $template ) {
 			$row->feed_meta = maybe_serialize( $feed_meta );
 
 			// Inserting feed for the new blog
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table write required.
 			$wpdb->insert(
 				$autoblog_table,
 				array(
@@ -143,8 +161,8 @@ function nbt_copy_autoblog_feeds( $template ) {
 }
 
 /** EASY GOOGLE FONTS **/
-add_action( 'blog_templates-copy-after_copying', 'nbt_copy_easy_google_fonts_controls', 10, 2 );
-function nbt_copy_easy_google_fonts_controls( $template, $destination_blog_id ) {
+add_action( 'blog_templates-copy-after_copying', 'nbtpl_copy_easy_google_fonts_controls', 10, 2 );
+function nbtpl_copy_easy_google_fonts_controls( $template, $destination_blog_id ) {
 	global $wpdb;
 
 	if ( ! is_plugin_active( 'easy-google-fonts/easy-google-fonts.php' ) )
@@ -155,37 +173,56 @@ function nbt_copy_easy_google_fonts_controls( $template, $destination_blog_id ) 
 	if ( ! isset( $template['to_copy']['posts'] ) && get_blog_details( $source_blog_id ) && get_blog_details( $destination_blog_id ) ) {
 		switch_to_blog( $source_blog_id );
 
-		$post_query = "SELECT t1.* FROM {$wpdb->posts} t1 ";
-		$post_query .= "WHERE t1.post_type = 'tt_font_control'";
-		$posts_results = $wpdb->get_results( $post_query );
+		$posts_cache_key = 'nbt_egf_posts_' . $source_blog_id;
+		$posts_results   = wp_cache_get( $posts_cache_key, 'blogtemplates' );
+		if ( false === $posts_results ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Bulk read needed for template copy.
+			$posts_results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT t1.* FROM {$wpdb->posts} t1 WHERE t1.post_type = %s",
+					'tt_font_control'
+				)
+			);
+			wp_cache_set( $posts_cache_key, $posts_results, 'blogtemplates', 5 * MINUTE_IN_SECONDS );
+		}
 
-		$postmeta_query = "SELECT t1.* FROM {$wpdb->postmeta} t1 ";
-		$postmeta_query .= "INNER JOIN $wpdb->posts t2 ON t1.post_id = t2.ID WHERE t2.post_type = 'tt_font_control'";
-		$postmeta_results = $wpdb->get_results( $postmeta_query );
+		$postmeta_cache_key = 'nbt_egf_postmeta_' . $source_blog_id;
+		$postmeta_results   = wp_cache_get( $postmeta_cache_key, 'blogtemplates' );
+		if ( false === $postmeta_results ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Bulk read needed for template copy.
+			$postmeta_results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT t1.* FROM {$wpdb->postmeta} t1 INNER JOIN {$wpdb->posts} t2 ON t1.post_id = t2.ID WHERE t2.post_type = %s",
+					'tt_font_control'
+				)
+			);
+			wp_cache_set( $postmeta_cache_key, $postmeta_results, 'blogtemplates', 5 * MINUTE_IN_SECONDS );
+		}
 
 		restore_current_blog();
 
 		switch_to_blog( $destination_blog_id );
 		foreach ( $posts_results as $row ) {
-            $row = (array)$row;
-            $wpdb->insert( $wpdb->posts, $row );
-        }
+			$row = (array) $row;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Insert into core tables required to preserve data during template copy.
+			$wpdb->insert( $wpdb->posts, $row );
+		}
 
-        foreach ( $postmeta_results as $row ) {
-            $row = (array)$row;
-            $wpdb->insert( $wpdb->postmeta, $row );
-        }
+		foreach ( $postmeta_results as $row ) {
+			$row = (array) $row;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Insert into core tables required to preserve data during template copy.
+			$wpdb->insert( $wpdb->postmeta, $row );
+		}
 
-        restore_current_blog();
-
+		restore_current_blog();
 	}
 }
 
 
 
 /** WORDPRESS HTTPS **/
-add_action( 'blog_templates-copy-options', 'nbt_hooks_set_https_settings' );
-function nbt_hooks_set_https_settings( $template ) {
+add_action( 'blog_templates-copy-options', 'nbtpl_hooks_set_https_settings' );
+function nbtpl_hooks_set_https_settings( $template ) {
 	if ( ! function_exists( 'is_plugin_active' ) )
 		include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 
@@ -200,16 +237,16 @@ function nbt_hooks_set_https_settings( $template ) {
 
 /** WOOCOMMERCE */
 
-add_filter( 'nbt_copy_files_skip_list', 'nbt_woo_copy_files_skip_list', 10, 2 );
-function nbt_woo_copy_files_skip_list( $skip_list, $dir_to_copy ) {
+add_filter( 'nbt_copy_files_skip_list', 'nbtpl_woo_copy_files_skip_list', 10, 2 );
+function nbtpl_woo_copy_files_skip_list( $skip_list, $dir_to_copy ) {
 	if ( is_file( $dir_to_copy . '/woocommerce_uploads/.htaccess' ) )
 		$skip_list[] = 'woocommerce_uploads/.htaccess';
 
 	return $skip_list;
 }
 
-add_action( "blog_templates-copy-after_copying", 'nbt_woo_after_copy' );
-function nbt_woo_after_copy() {
+add_action( "blog_templates-copy-after_copying", 'nbtpl_woo_after_copy' );
+function nbtpl_woo_after_copy() {
 
 	if ( is_file( WP_CONTENT_DIR . '/plugins/woocommerce/includes/admin/class-wc-admin-settings.php' ) )
 		include_once( WP_CONTENT_DIR . '/plugins/woocommerce/includes/admin/class-wc-admin-settings.php' );
@@ -221,8 +258,8 @@ function nbt_woo_after_copy() {
 /**
  * UPFRONT
  */
-add_action( "blog_templates-copy-after_copying", 'nbt_upfront_copy_options', 10, 2 );
-function nbt_upfront_copy_options( $template, $destination_blog_id ) {
+add_action( "blog_templates-copy-after_copying", 'nbtpl_upfront_copy_options', 10, 2 );
+function nbtpl_upfront_copy_options( $template, $destination_blog_id ) {
 	global $wpdb;
 
 	$source_blog_id = absint( $template['blog_id'] );
@@ -237,7 +274,22 @@ function nbt_upfront_copy_options( $template, $destination_blog_id ) {
 		$source_url = preg_replace( '/^https?\:\/\//', '', $source_url );
 		$destination_url = preg_replace( '/^https?\:\/\//', '', $destination_url );
 
-		$results = $wpdb->get_col( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE '$theme_name%'");
+
+			$theme_name_value = (string) $theme_name;
+			$theme_name_like  = $wpdb->esc_like( $theme_name_value ) . '%';
+
+			$cache_key = 'nbt_upfront_option_names_' . get_current_blog_id() . '_' . md5( $theme_name_like );
+			$results    = wp_cache_get( $cache_key, 'blogtemplates' );
+			if ( false === $results ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Options prefix search has no core API equivalent.
+				$results = $wpdb->get_col(
+					$wpdb->prepare(
+						"SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+						$theme_name_like
+					)
+				);
+				wp_cache_set( $cache_key, $results, 'blogtemplates', 5 * MINUTE_IN_SECONDS );
+			}
 
 		foreach ( $results as $option_name ) {
 			$json_value = get_option( $option_name );
@@ -257,8 +309,8 @@ function nbt_upfront_copy_options( $template, $destination_blog_id ) {
 
 
 //POPUP PRO
-add_filter( 'nbt_copier_settings', 'nbt_popover_template_settings', 10, 3 );
-function nbt_popover_template_settings( $settings, $src_blog_id, $new_blog_id ) {
+add_filter( 'nbt_copier_settings', 'nbtpl_popover_template_settings', 10, 3 );
+function nbtpl_popover_template_settings( $settings, $src_blog_id, $new_blog_id ) {
 	global $wpdb;
 
 	switch_to_blog( $src_blog_id );
@@ -273,8 +325,8 @@ function nbt_popover_template_settings( $settings, $src_blog_id, $new_blog_id ) 
 	restore_current_blog();
 	return $settings;
 }
-//add_action( 'blog_templates-copy-after_copying', 'nbt_popover_copy_settings', 10, 2 );
-function nbt_popover_copy_settings( $template, $new_blog_id ) {
+//add_action( 'blog_templates-copy-after_copying', 'nbtpl_popover_copy_settings', 10, 2 );
+function nbtpl_popover_copy_settings( $template, $new_blog_id ) {
 	if ( in_array( 'settings', $template['to_copy'] ) ) {
 		$popup_options = get_blog_option( $template['blog_id'], 'inc_popup-config' );
 		if ( ! $popup_options )
@@ -288,8 +340,8 @@ function nbt_popover_copy_settings( $template, $new_blog_id ) {
 /**
  * PRO SITES
  */
-add_filter( 'psts_setting_checkout_url', 'nbt_pro_sites_checkout_url_setting' );
-function nbt_pro_sites_checkout_url_setting( $value ) {
+add_filter( 'psts_setting_checkout_url', 'nbtpl_pro_sites_checkout_url_setting' );
+function nbtpl_pro_sites_checkout_url_setting( $value ) {
 	global $pagenow, $psts;
 
 	if ( ! is_object( $psts ) )
@@ -297,18 +349,95 @@ function nbt_pro_sites_checkout_url_setting( $value ) {
 
 	$show_signup = $psts->get_setting( 'show_signup' );
 
-	if ( ! is_admin() && 'wp-signup.php' == $pagenow && $show_signup && isset( $_REQUEST['blog_template'] ) ) {
-		$value = add_query_arg( 'blog_template', $_REQUEST['blog_template'], $value );
+	$blog_template = '';
+	if ( isset( $_REQUEST['blog_template'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$blog_template = sanitize_text_field( wp_unslash( $_REQUEST['blog_template'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	if ( ! is_admin() && 'wp-signup.php' == $pagenow && $show_signup && '' !== $blog_template ) {
+		$value = add_query_arg( 'blog_template', $blog_template, $value );
 	}
 
 	return $value;
 }
 
-add_filter( 'psts_redirect_signup_page_url', 'nbt_pro_sites_checkout_url' );
-function nbt_pro_sites_checkout_url( $url ) {
-	if ( isset( $_REQUEST['blog_template'] ) ) {
-		$url = add_query_arg( 'blog_template', $_REQUEST['blog_template'], $url );
+
+add_filter( 'psts_redirect_signup_page_url', 'nbtpl_pro_sites_checkout_url' );
+function nbtpl_pro_sites_checkout_url( $url ) {
+	$blog_template = '';
+	if ( isset( $_REQUEST['blog_template'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$blog_template = sanitize_text_field( wp_unslash( $_REQUEST['blog_template'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	if ( '' !== $blog_template ) {
+		$url = add_query_arg( 'blog_template', $blog_template, $url );
 	}
 
 	return $url;
+}
+
+
+/**
+ * Deprecated wrappers (Phase 3 naming: nbt_* -> nbtpl_*).
+ * These are intentionally retained for backward compatibility.
+ */
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_add_membership_caps( ...$args ) {
+	return nbtpl_add_membership_caps( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_bp_add_register_scripts( ...$args ) {
+	return nbtpl_bp_add_register_scripts( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_appplus_unregister_action( ...$args ) {
+	return nbtpl_appplus_unregister_action( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_framemarket_list_shops( ...$args ) {
+	return nbtpl_framemarket_list_shops( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_remove_blogs_from_directory( ...$args ) {
+	return nbtpl_remove_blogs_from_directory( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_copy_autoblog_feeds( ...$args ) {
+	return nbtpl_copy_autoblog_feeds( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_copy_easy_google_fonts_controls( ...$args ) {
+	return nbtpl_copy_easy_google_fonts_controls( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_hooks_set_https_settings( ...$args ) {
+	return nbtpl_hooks_set_https_settings( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_woo_copy_files_skip_list( ...$args ) {
+	return nbtpl_woo_copy_files_skip_list( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_woo_after_copy( ...$args ) {
+	return nbtpl_woo_after_copy( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_upfront_copy_options( ...$args ) {
+	return nbtpl_upfront_copy_options( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_popover_template_settings( ...$args ) {
+	return nbtpl_popover_template_settings( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_popover_copy_settings( ...$args ) {
+	return nbtpl_popover_copy_settings( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_pro_sites_checkout_url_setting( ...$args ) {
+	return nbtpl_pro_sites_checkout_url_setting( ...$args );
+}
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+function nbt_pro_sites_checkout_url( ...$args ) {
+	return nbtpl_pro_sites_checkout_url( ...$args );
 }

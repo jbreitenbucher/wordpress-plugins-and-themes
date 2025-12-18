@@ -16,7 +16,17 @@ class NBT_Lock_Posts {
     private $meta_key = 'nbt_block_post';
 
     public function __construct() {
-        if ( ! apply_filters( 'nbt_activate_block_posts_feature', true ) ) {
+        $nbtpl_activate_block_posts_feature = apply_filters( 'nbtpl_activate_block_posts_feature', true );
+
+        if ( function_exists( 'apply_filters_deprecated' ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $nbtpl_activate_block_posts_feature = apply_filters_deprecated( 'nbt_activate_block_posts_feature', array( $nbtpl_activate_block_posts_feature ), '3.0.3', 'nbtpl_activate_block_posts_feature' );
+        } else {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
+            $nbtpl_activate_block_posts_feature = apply_filters( 'nbt_activate_block_posts_feature', $nbtpl_activate_block_posts_feature );
+        }
+
+        if ( ! $nbtpl_activate_block_posts_feature ) {
             return;
         }
 
@@ -38,7 +48,7 @@ class NBT_Lock_Posts {
         foreach ( $this->_lock_types as $type ) {
             add_meta_box(
                 'nbt_post_lock_meta_box',
-                __( 'Post Status', 'blog_templates' ),
+                __( 'Post Status', 'blogtemplates' ),
                 array( $this, 'meta_box_output' ),
                 $type,
                 'side',
@@ -58,13 +68,13 @@ class NBT_Lock_Posts {
         wp_nonce_field( 'nbt_post_lock_nonce', 'nbt_post_lock_nonce_field' );
         ?>
         <p>
-            <label for="nbt_post_lock_status" class="screen-reader-text"><?php esc_html_e( 'Post Status', 'blog_templates' ); ?></label>
+            <label for="nbt_post_lock_status" class="screen-reader-text"><?php esc_html_e( 'Post Status', 'blogtemplates' ); ?></label>
             <select name="nbt_post_lock_status" id="nbt_post_lock_status">
-                <option value="locked" <?php selected( $post_lock_status, 'locked' ); ?>><?php esc_html_e( 'Locked', 'blog_templates' ); ?></option>
-                <option value="unlocked" <?php selected( $post_lock_status, 'unlocked' ); ?>><?php esc_html_e( 'Unlocked', 'blog_templates' ); ?></option>
+                <option value="locked" <?php selected( $post_lock_status, 'locked' ); ?>><?php esc_html_e( 'Locked', 'blogtemplates' ); ?></option>
+                <option value="unlocked" <?php selected( $post_lock_status, 'unlocked' ); ?>><?php esc_html_e( 'Unlocked', 'blogtemplates' ); ?></option>
             </select>
         </p>
-        <p><?php esc_html_e( 'Locked posts cannot be edited by anyone other than Super admins.', 'blog_templates' ); ?></p>
+        <p><?php esc_html_e( 'Locked posts cannot be edited by anyone other than Super admins.', 'blogtemplates' ); ?></p>
         <?php
     }
 
@@ -82,15 +92,18 @@ class NBT_Lock_Posts {
             return;
         }
 
-        if ( empty( $_POST['nbt_post_lock_nonce_field'] ) || ! wp_verify_nonce( wp_unslash( $_POST['nbt_post_lock_nonce_field'] ), 'nbt_post_lock_nonce' ) ) {
+        // Retrieve and verify the nonce from the post lock meta box.
+        $nonce = filter_input( INPUT_POST, 'nbt_post_lock_nonce_field', FILTER_SANITIZE_STRING );
+        if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'nbt_post_lock_nonce' ) ) {
             return;
         }
 
-        if ( ! isset( $_POST['nbt_post_lock_status'] ) ) {
+        // Get the requested lock status from the form submission.
+        $status = filter_input( INPUT_POST, 'nbt_post_lock_status', FILTER_SANITIZE_STRING );
+        if ( null === $status ) {
             return;
         }
 
-        $status = sanitize_text_field( wp_unslash( $_POST['nbt_post_lock_status'] ) );
         if ( 'locked' === $status ) {
             update_post_meta( $post_id, $this->meta_key, '1' );
         } else {
@@ -98,7 +111,8 @@ class NBT_Lock_Posts {
         }
     }
 
-    /**
+
+/**
      * Filter capabilities so locked posts cannot be edited by non-super-admins.
      *
      * @param array $all_caps All the user's capabilities.
@@ -163,8 +177,8 @@ class NBT_Lock_Posts {
             return;
         }
 
-        $action = isset( $_GET['action'] ) ? sanitize_text_field( wp_unslash( $_GET['action'] ) ) : '';
-        $post_id = isset( $_GET['post'] ) ? absint( wp_unslash( $_GET['post'] ) ) : 0;
+        $action = isset( $_GET['action'] ) ? sanitize_text_field( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+        $post_id = isset( $_GET['post'] ) ? absint( wp_unslash( $_GET['post'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
         if ( 'edit' !== $action || ! $post_id ) {
             return;
@@ -180,4 +194,4 @@ class NBT_Lock_Posts {
     }
 }
 
-$lock_posts = new NBT_Lock_Posts();
+$nbtpl_lock_posts = new NBT_Lock_Posts();

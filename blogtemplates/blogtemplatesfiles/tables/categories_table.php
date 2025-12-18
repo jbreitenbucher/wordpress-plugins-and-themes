@@ -29,8 +29,8 @@ class blog_templates_categories_table extends WP_List_Table {
 
     function get_columns(){
         $columns = array(
-            'name'      => __( 'Name', 'blog_templates' ),
-            'description'   => __( 'Description', 'blog_templates' )
+            'name'      => __( 'Name', 'blogtemplates' ),
+            'description'   => __( 'Description', 'blogtemplates' )
         );
         return $columns;
     }
@@ -39,8 +39,9 @@ class blog_templates_categories_table extends WP_List_Table {
     function column_name( $item ) {
         $delete_link = add_query_arg(
             array(
-                'action' => 'delete',
-                'category' => (int)$item['ID']
+                'action'   => 'delete',
+                'category' => (int) $item['ID'],
+                '_wpnonce' => wp_create_nonce( 'delete-nbt-category_' . (int) $item['ID'] ),
             )
         );
 
@@ -53,19 +54,21 @@ class blog_templates_categories_table extends WP_List_Table {
         );
 
         $actions = array(
-            'edit' => sprintf( __( '<a href="%s">Edit</a>', 'blog_templates' ), $edit_link ),
+        /* translators: %s: URL for the edit category link. */
+            'edit' => sprintf( __( '<a href="%s">Edit</a>', 'blogtemplates' ), $edit_link ),
 
         );
 
 
         if ( ! $item['is_default'] ) {
-            $actions['delete'] = sprintf( __( '<a href="%s">Delete</a>', 'blog_templates' ), $delete_link );
+        /* translators: %s: URL for the delete category link. */
+            $actions['delete'] = sprintf( __( '<a href="%s">Delete</a>', 'blogtemplates' ), $delete_link );
         }
         return $item['name'] . $this->row_actions($actions);
     }
 
     function column_description( $item ) {
-        echo nl2br( $item['description'] );
+        echo nl2br( esc_html( $item['description'] ) );
     }
 
 
@@ -74,9 +77,13 @@ class blog_templates_categories_table extends WP_List_Table {
 
         $model = nbt_get_model();
 
-        if( 'delete' === $this->current_action() ) {
-            if ( isset( $_GET['category'] ) && $category = absint( $_GET['category'] ) )
+        if ( 'delete' === $this->current_action() ) {
+            $category = isset( $_GET['category'] ) ? absint( wp_unslash( $_GET['category'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+            $nonce    = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+
+            if ( $category > 0 && $nonce && wp_verify_nonce( $nonce, 'delete-nbt-category_' . $category ) ) {
                 $model->delete_template_category( $category );
+            }
         }
 
     	$per_page = 7;

@@ -8,8 +8,6 @@ New Blog Templates is a WordPress Multisite plugin that allows network administr
 
 This version fixes long-standing issues with deprecated functions, Network Admin menu placement, template category management, and AJAX-based filtering during signup.
 
----
-
 ## Features
 
 - Create template sites from any site in the network
@@ -18,8 +16,6 @@ This version fixes long-standing issues with deprecated functions, Network Admin
 - AJAX category filtering for large networks
 - Fully functional in **Network Admin** (no orphan menus or broken links)
 - Updated codebase: security, performance, and PHP 8+ compatibility improvements
-
----
 
 ## Requirements
 
@@ -30,8 +26,6 @@ This version fixes long-standing issues with deprecated functions, Network Admin
 | Database | MySQL / MariaDB supported by core WP |
 
 This plugin **only applies** to networks where site creation is enabled.
-
----
 
 ## Installation
 
@@ -44,16 +38,12 @@ Copy code
 3. Network Activate the plugin from **Network Admin → Plugins**.
 4. Verify Network Settings allow users to create new sites.
 
----
-
 ## Creating a Template
 
 1. Pick an existing site on the network (excluding the main site).
 2. Go to **Network Admin → Templates → Add New Template**.
 3. Select the source site and assign categories.
 4. Save — the template will now be available during site signup.
-
----
 
 ## Testing Signup Workflow
 
@@ -66,8 +56,6 @@ Copy code
 3. Choose a template and complete the signup
 4. Newly launched site inherits content/settings from template source
 
----
-
 ## Development Notes
 
 - AJAX endpoint improvements located in  
@@ -79,20 +67,14 @@ Copy code
 
 Issue tracking and contributions welcome via GitHub.
 
----
-
 ## License
 
 GPLv2 or later  
 (Shared under WordPress plugin licensing standards)
 
----
-
 ## Credits
 
 Originally created by WPMU DEV and community contributors.  
 Modernized and maintained by The College of Wooster / EdTech community.
-
----
 
 > Multisite should be a superpower, not a liability — this plugin helps keep it that way.

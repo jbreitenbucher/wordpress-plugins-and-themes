@@ -1,5 +1,5 @@
 === New Blog Templates ===
-Contributors: wpmudev
+Contributors: thecollegeofwooster,wpmudev
 Tags: multisite, templates
 Requires at least: 6.2
 Tested up to: 6.9

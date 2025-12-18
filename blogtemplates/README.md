@@ -32,9 +32,6 @@ This plugin **only applies** to networks where site creation is enabled.
 1. Enable Multisite in your WordPress installation.
 2. Clone or download this repository into:
 wp-content/plugins/blogtemplates/
-
-yaml
-Copy code
 3. Network Activate the plugin from **Network Admin → Plugins**.
 4. Verify Network Settings allow users to create new sites.
 
@@ -49,9 +46,6 @@ Copy code
 
 1. Visit your network’s signup page:
 https://example.com/wp-signup.php
-
-yaml
-Copy code
 2. Select a **Template Category** → Page dynamically updates with relevant templates
 3. Choose a template and complete the signup
 4. Newly launched site inherits content/settings from template source

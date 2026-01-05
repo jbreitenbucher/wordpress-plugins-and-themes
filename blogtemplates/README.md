@@ -38,7 +38,7 @@ wp-content/plugins/blogtemplates/
 ## Creating a Template
 
 1. Pick an existing site on the network (excluding the main site).
-2. Go to **Network Admin → Templates → Add New Template**.
+2. Go to **Network Admin → Blog Templates → Add New Template**.
 3. Select the source site and assign categories.
 4. Save — the template will now be available during site signup.
 
@@ -56,8 +56,7 @@ https://example.com/wp-signup.php
 `blog_templates_theme_selection_toolbar.php` and `toolbar.js`
 - Deprecation fixes and Security improvements are ongoing
 - Future roadmap includes:
-- Block-theme template support
-- More granular cloning options (e.g., plugins, users, menu mapping)
+-- More granular cloning options (e.g., plugins, users, menu mapping)
 
 Issue tracking and contributions welcome via GitHub.
 
@@ -69,6 +68,6 @@ GPLv2 or later
 ## Credits
 
 Originally created by WPMU DEV and community contributors.  
-Modernized and maintained by The College of Wooster / EdTech community.
+Modernized and maintained by The College of Wooster / EdTech.
 
 > Multisite should be a superpower, not a liability — this plugin helps keep it that way.

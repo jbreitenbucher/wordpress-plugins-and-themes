@@ -471,10 +471,26 @@ class NBTPL_Template_Copier {
                 include_once( ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php' );
                 include_once( ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php' );
 
-				// Ensure core file utilities (including copy_dir() and FS_CHMOD_* defaults) are available.
-				if ( ! function_exists( 'copy_dir' ) || ! defined( 'FS_CHMOD_DIR' ) || ! defined( 'FS_CHMOD_FILE' ) ) {
-					require_once ABSPATH . 'wp-admin/includes/file.php';
-				}
+					// Ensure core file utilities are available.
+					if ( ! function_exists( 'copy_dir' ) ) {
+						require_once ABSPATH . 'wp-admin/includes/file.php';
+					}
+
+					// copy_dir() expects filesystem permission constants to be available.
+					// Some environments (notably during front-end signup flows) may not have initialized WP_Filesystem().
+					if ( ( ! defined( 'FS_CHMOD_DIR' ) || ! defined( 'FS_CHMOD_FILE' ) ) && function_exists( 'WP_Filesystem' ) ) {
+						WP_Filesystem();
+					}
+
+					// If the constants are still missing, fail gracefully rather than triggering a fatal in copy_dir().
+					if ( ! defined( 'FS_CHMOD_DIR' ) || ! defined( 'FS_CHMOD_FILE' ) ) {
+						global $wpdb;
+						/* translators: %s: WordPress filesystem bootstrap function name. */
+						$error = '<div id="message" class="error"><p>' . sprintf( __( 'File System Error: Unable to initialize the WordPress filesystem (%s). Please ensure your environment allows direct file operations or that the filesystem is configured properly. (New Blog Templates - While copying files)', 'blogtemplates' ), 'WP_Filesystem()' ) . '</p></div>';
+						$wpdb->query( 'ROLLBACK;' );
+						restore_current_blog();
+						wp_die( wp_kses_post( $error ) );
+					}
 
                 if ( is_object( $wp_filesystem ) )
                     $orig_filesystem = wp_clone( $wp_filesystem );
@@ -492,7 +508,7 @@ class NBTPL_Template_Copier {
                     // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Back-compat for legacy integrations.
                     $skip_list = apply_filters( 'nbt_copy_files_skip_list', $skip_list, $dir_to_copy );
                 }
-                $result = copy_dir( $dir_to_copy, $dir_to_copy_into, $skip_list );
+						$result = copy_dir( $dir_to_copy, $dir_to_copy_into, $skip_list );
 
                 unset( $wp_filesystem );
 

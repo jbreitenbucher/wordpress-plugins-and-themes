@@ -1,10 +1,10 @@
 === New Blog Templates ===
-Contributors: thecollegeofwooster,wpmudev
+Contributors: thecollegeofwooster, wpmudev
 Tags: multisite, templates
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.0.4
+Stable tag: 3.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,10 +32,12 @@ The plugin includes a `CHANGELOG` file for extended history and internal phase n
 2. Template selection screen on `wp-signup.php`.
 
 == Changelog ==
+= 3.0.5 =
+* Ensure WordPress filesystem bootstrapping before calling copy_dir() during site creation to prevent fatal errors when FS_CHMOD_* constants are unavailable.
+
 = 3.0.4 =
-* Enqueue/versioning audit: add explicit $ver (and $in_footer for scripts) to satisfy Plugin Check WP.EnqueuedResourceParameters.
-* Standardize plugin constants to NBTPL_* (4+ chars) with deprecated back-compat NBT_* aliases.
-* Normalize readme.txt to standard WordPress.org section format.
+* 3.0.4-phase4a: Enqueue/versioning audit: add explicit $ver and $in_footer parameters for plugin scripts/styles to satisfy Plugin Check WP.EnqueuedResourceParameters warnings.
+* 3.0.4-phase4b: Standardize plugin constants to NBTPL_* (4+ char prefix) with deprecated NBT_* back-compat aliases; normalize readme.txt to WordPress.org section format.
 
 = 3.0.3 =
 * 3.0.3-phase3h: Fix signup template display regression from phase3g by providing $nbtpl_templates to included template partials (wp-signup.php).
@@ -51,5 +53,8 @@ The plugin includes a `CHANGELOG` file for extended history and internal phase n
 * Modernization release baseline.
 
 == Upgrade Notice ==
+= 3.0.5 =
+Fixes a fatal error on some environments during site creation from templates by ensuring filesystem initialization before copying files.
+
 = 3.0.4 =
 Maintenance release: enqueue parameter compliance + internal constant prefix normalization (back-compat preserved).

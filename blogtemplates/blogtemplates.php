@@ -5,7 +5,7 @@ Plugin URI: https://github.com/jbreitenbucher/wordpress-plugins-and-themes/tree/
 Description: Allows the site admin to create new blogs based on templates, to speed up the blog creation process, and allows users to choose from available templates when creating a site.
 Author: WPMU DEV/The College of Wooster
 Author URI: https://wooster.edu/
-Version: 3.0.4
+Version: 3.0.5
 Requires at least: 6.2
 Network: true
 License: GPLv2 or later
@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // Use modern, 4+ character prefix constants as the canonical names.
 // Legacy NBT_* constants are preserved as aliases for back-compat.
 if ( ! defined( 'NBTPL_PLUGIN_VERSION' ) ) {
-	define( 'NBTPL_PLUGIN_VERSION', '3.0.4' );
+	define( 'NBTPL_PLUGIN_VERSION', '3.0.5' );
 }
 if ( ! is_multisite() ) {
 	wp_die( esc_html__( 'The New Blog Template plugin is only compatible with WordPress Multisite.', 'blogtemplates' ) );

@@ -56,7 +56,7 @@ https://example.com/wp-signup.php
 `blog_templates_theme_selection_toolbar.php` and `toolbar.js`
 - Deprecation fixes and Security improvements are ongoing
 - Future roadmap includes:
--- More granular cloning options (e.g., plugins, users, menu mapping)
+  - More granular cloning options (e.g., plugins, users, menu mapping)
 
 Issue tracking and contributions welcome via GitHub.
 

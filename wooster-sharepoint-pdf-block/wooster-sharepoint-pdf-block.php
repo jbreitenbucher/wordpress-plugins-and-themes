@@ -65,11 +65,9 @@ final class Wooster_SharePoint_PDF_Block {
         $filename = isset( $attributes['filename'] ) ? sanitize_file_name( (string) $attributes['filename'] ) : '';
         $height   = isset( $attributes['height'] ) ? max( 200, (int) $attributes['height'] ) : 900;
 
-        $u = self::b64url_encode( $share_url );
-
         $viewer_url = add_query_arg(
             [
-                'u'  => $u,
+                'u'  => self::b64url_encode( $share_url ),
                 'fn' => $filename,
             ],
             rest_url( self::NS . '/viewer' )
@@ -254,31 +252,14 @@ final class Wooster_SharePoint_PDF_Block {
         body { background: #f3f4f6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
         #app { height: 100%; display: flex; flex-direction: column; }
         #scroller { flex: 1; overflow: auto; padding: 16px 0; }
-        .page {
-            display: flex;
-            justify-content: center;
-            margin: 0 auto 14px auto;
-            width: 100%;
-        }
-        canvas {
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            border-radius: 6px;
-            display: block;
-        }
-        #status {
-            padding: 10px 14px;
-            font-size: 13px;
-            color: #111827;
-            background: #ffffff;
-            border-bottom: 1px solid rgba(0,0,0,0.08);
-        }
-        #status small { color: #6b7280; }
+        .page { display: flex; justify-content: center; margin: 0 auto 14px auto; width: 100%; }
+        canvas { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-radius: 6px; display: block; }
+        #status { padding: 10px 14px; font-size: 13px; color: #111827; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.08); }
     </style>
 </head>
 <body>
     <div id="app">
-        <div id="status">Loading PDF… <small>(fit-to-width, continuous scroll)</small></div>
+        <div id="status">Loading PDF…</div>
         <div id="scroller" role="document" aria-label="PDF document"></div>
     </div>
 
@@ -302,39 +283,39 @@ final class Wooster_SharePoint_PDF_Block {
 
         let pdfDoc = null;
         let pageCount = 0;
-
-        // Based on page 1 aspect ratio to ensure placeholders have real height.
-        let pageAspect = 1.294; // fallback ~ letter-ish
+        let pageAspect = 1.294; // fallback (height/width)
         const rendered = new Map(); // pageNumber -> { canvas, rendering, renderedOnce }
 
-        function containerWidth() {
-            // Fit-to-width, but cap the max for readability.
-            return Math.max(320, Math.min(scroller.clientWidth, 980) - 24);
+        function safeScrollerWidth() {
+            // Never return 0. Some layouts report 0 during early frames.
+            const w = scroller && scroller.clientWidth ? scroller.clientWidth : 0;
+            const ww = document.documentElement ? document.documentElement.clientWidth : 0;
+            return Math.max(320, Math.min((w || ww || window.innerWidth || 980), 980) - 24);
         }
 
         async function computeAspectFromFirstPage() {
             const p1 = await pdfDoc.getPage(1);
             const v1 = p1.getViewport({ scale: 1 });
-            pageAspect = v1.height / v1.width;
+            if (v1 && v1.width > 0 && v1.height > 0) {
+                pageAspect = v1.height / v1.width;
+            }
         }
 
         function buildPlaceholders(numPages) {
             const frag = document.createDocumentFragment();
-            const w = containerWidth();
+            const w = safeScrollerWidth();
             const h = Math.round(w * pageAspect);
 
             for (let i = 1; i <= numPages; i++) {
                 const wrap = document.createElement('div');
                 wrap.className = 'page';
                 wrap.dataset.pageNumber = String(i);
-
-                // Non-zero height so it’s visible and observable before render.
                 wrap.style.minHeight = h + 'px';
 
                 const canvas = document.createElement('canvas');
                 canvas.setAttribute('aria-label', 'Page ' + i);
 
-                // Placeholder CSS size (updated on real render).
+                // Visible placeholder size so you can confirm the update is live.
                 canvas.style.width = w + 'px';
                 canvas.style.height = h + 'px';
 
@@ -348,22 +329,6 @@ final class Wooster_SharePoint_PDF_Block {
             scroller.appendChild(frag);
         }
 
-        function observeAndLazyRender() {
-            const io = new IntersectionObserver((entries) => {
-                for (const entry of entries) {
-                    if (!entry.isIntersecting) continue;
-                    const pageNumber = parseInt(entry.target.dataset.pageNumber, 10);
-                    renderPage(pageNumber);
-                }
-            }, {
-                root: scroller,
-                rootMargin: '900px 0px',
-                threshold: 0.01
-            });
-
-            scroller.querySelectorAll('.page').forEach(el => io.observe(el));
-        }
-
         async function renderPage(pageNumber) {
             if (!pdfDoc) return;
             const rec = rendered.get(pageNumber);
@@ -374,25 +339,23 @@ final class Wooster_SharePoint_PDF_Block {
             try {
                 const page = await pdfDoc.getPage(pageNumber);
 
-                // Fit-to-width scale (in CSS pixels).
-                const w = containerWidth();
+                const w = safeScrollerWidth();
                 const viewport1 = page.getViewport({ scale: 1 });
                 const scale = Math.max(0.1, w / viewport1.width);
 
                 const viewport = page.getViewport({ scale });
                 const dpr = window.devicePixelRatio || 1;
 
-                // Set CSS size explicitly (so the page takes space even if re-rendering).
+                // CSS size (layout)
                 rec.canvas.style.width = Math.round(viewport.width) + 'px';
                 rec.canvas.style.height = Math.round(viewport.height) + 'px';
 
-                // Backing buffer for crispness.
+                // Backing buffer (paint)
                 rec.canvas.width  = Math.floor(viewport.width * dpr);
                 rec.canvas.height = Math.floor(viewport.height * dpr);
 
                 const ctx = rec.canvas.getContext('2d', { alpha: false });
 
-                // Use pdf.js transform rather than pre-scaling the context.
                 await page.render({
                     canvasContext: ctx,
                     viewport: viewport,
@@ -404,11 +367,49 @@ final class Wooster_SharePoint_PDF_Block {
                 rec.rendering = false;
             } catch (e) {
                 rec.rendering = false;
-                // Don’t spam—only surface the first render error.
-                if (!statusEl.dataset.renderErrorShown) {
-                    statusEl.dataset.renderErrorShown = '1';
-                    setStatus('Render failed on page ' + pageNumber + '.');
+                setStatus('Render failed (page ' + pageNumber + ').');
+            }
+        }
+
+        // Fallback renderer: no IntersectionObserver required.
+        function renderVisiblePages() {
+            const top = scroller.scrollTop;
+            const bottom = top + scroller.clientHeight;
+
+            for (const el of scroller.querySelectorAll('.page')) {
+                const pn = parseInt(el.dataset.pageNumber, 10);
+                const rectTop = el.offsetTop;
+                const rectBottom = rectTop + el.offsetHeight;
+
+                // render if within +/- 1200px viewport band
+                if (rectBottom >= top - 1200 && rectTop <= bottom + 1200) {
+                    renderPage(pn);
                 }
+            }
+        }
+
+        function startObservers() {
+            // Try IntersectionObserver, but never let it prevent initial rendering.
+            try {
+                if (!('IntersectionObserver' in window)) throw new Error('no IO');
+
+                const io = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (!entry.isIntersecting) continue;
+                        const pn = parseInt(entry.target.dataset.pageNumber, 10);
+                        renderPage(pn);
+                    }
+                }, {
+                    root: scroller,
+                    rootMargin: '900px 0px',
+                    threshold: 0.01
+                });
+
+                scroller.querySelectorAll('.page').forEach(el => io.observe(el));
+            } catch (e) {
+                // Fallback: scroll-based rendering
+                scroller.addEventListener('scroll', () => requestAnimationFrame(renderVisiblePages), { passive: true });
+                renderVisiblePages();
             }
         }
 
@@ -418,20 +419,22 @@ final class Wooster_SharePoint_PDF_Block {
             resizeTimer = setTimeout(() => {
                 if (!pdfDoc) return;
 
-                const w = containerWidth();
+                const w = safeScrollerWidth();
                 const h = Math.round(w * pageAspect);
 
-                // Update placeholder sizes immediately.
                 for (const rec of rendered.values()) {
-                    rec.canvas.style.width = w + 'px';
-                    rec.canvas.style.height = h + 'px';
+                    // keep placeholders meaningful on resize
+                    if (!rec.renderedOnce) {
+                        rec.canvas.style.width = w + 'px';
+                        rec.canvas.style.height = h + 'px';
+                    }
                 }
 
-                // Re-render pages that have rendered at least once.
-                for (const [pageNumber, rec] of rendered.entries()) {
+                // re-render rendered pages at new width
+                for (const [pn, rec] of rendered.entries()) {
                     if (rec.renderedOnce) {
                         rec.rendering = false;
-                        renderPage(pageNumber);
+                        renderPage(pn);
                     }
                 }
             }, 160);
@@ -454,24 +457,20 @@ final class Wooster_SharePoint_PDF_Block {
             try {
                 setStatus('Loading PDF…');
 
-                const loadingTask = pdfjsLib.getDocument({
-                    url: pdfUrl,
-                    withCredentials: false
-                });
-
+                const loadingTask = pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false });
                 pdfDoc = await loadingTask.promise;
-                pageCount = pdfDoc.numPages;
 
-                // IMPORTANT: compute aspect from page 1 so placeholders have height.
+                pageCount = pdfDoc.numPages;
                 await computeAspectFromFirstPage();
 
                 setStatus('Loaded ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') + '.');
 
                 buildPlaceholders(pageCount);
-                observeAndLazyRender();
+                startObservers();
 
-                // Render page 1 immediately so something appears fast.
-                renderPage(1);
+                // Force initial renders after layout settles.
+                requestAnimationFrame(() => renderPage(1));
+                requestAnimationFrame(() => renderPage(2));
             } catch (e) {
                 const hint = await getFailureHint();
                 setStatus('Failed to load PDF (' + hint + ').');
@@ -550,13 +549,11 @@ final class Wooster_SharePoint_PDF_Block {
             return $segs[ $idx + 1 ];
         }
 
-        // Share links often use /:b:/s/<SITE>/<TOKEN> or /:u:/s/<SITE>/<TOKEN>
         $idx = array_search( 's', $segs, true );
         if ( $idx !== false && isset( $segs[ $idx + 1 ] ) ) {
             return $segs[ $idx + 1 ];
         }
 
-        // Some links use /r/sites/<SITE>/...
         $idx = array_search( 'r', $segs, true );
         if ( $idx !== false && isset( $segs[ $idx + 2 ] ) && isset( $segs[ $idx + 1 ] ) && $segs[ $idx + 1 ] === 'sites' ) {
             return $segs[ $idx + 2 ];

@@ -251,10 +251,11 @@ final class Wooster_SharePoint_PDF_Block {
         html, body { height: 100%; margin: 0; }
         body { background: #f3f4f6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
         #app { height: 100%; display: flex; flex-direction: column; }
-        #scroller { flex: 1; overflow: auto; padding: 16px 0; }
+        #status { padding: 10px 14px; font-size: 13px; color: #111827; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.08); }
+        /* Padding lives here; width calculations subtract it so pages truly fit-to-width */
+        #scroller { flex: 1; overflow: auto; padding: 12px; box-sizing: border-box; }
         .page { display: flex; justify-content: center; margin: 0 auto 14px auto; width: 100%; }
         canvas { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-radius: 6px; display: block; }
-        #status { padding: 10px 14px; font-size: 13px; color: #111827; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.08); }
     </style>
 </head>
 <body>
@@ -278,7 +279,6 @@ final class Wooster_SharePoint_PDF_Block {
             setStatus('PDF.js failed to load.');
             return;
         }
-
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
         let pdfDoc = null;
@@ -286,11 +286,13 @@ final class Wooster_SharePoint_PDF_Block {
         let pageAspect = 1.294; // fallback (height/width)
         const rendered = new Map(); // pageNumber -> { canvas, rendering, renderedOnce }
 
-        function safeScrollerWidth() {
-            // Never return 0. Some layouts report 0 during early frames.
-            const w = scroller && scroller.clientWidth ? scroller.clientWidth : 0;
-            const ww = document.documentElement ? document.documentElement.clientWidth : 0;
-            return Math.max(320, Math.min((w || ww || window.innerWidth || 980), 980) - 24);
+        function innerScrollerWidth() {
+            // Fit-to-width means "use the iframe viewer width" (minus scroller padding).
+            const cs = getComputedStyle(scroller);
+            const padL = parseFloat(cs.paddingLeft) || 0;
+            const padR = parseFloat(cs.paddingRight) || 0;
+            const raw = (scroller.clientWidth || document.documentElement.clientWidth || window.innerWidth || 980) - padL - padR;
+            return Math.max(320, raw);
         }
 
         async function computeAspectFromFirstPage() {
@@ -303,7 +305,7 @@ final class Wooster_SharePoint_PDF_Block {
 
         function buildPlaceholders(numPages) {
             const frag = document.createDocumentFragment();
-            const w = safeScrollerWidth();
+            const w = innerScrollerWidth();
             const h = Math.round(w * pageAspect);
 
             for (let i = 1; i <= numPages; i++) {
@@ -315,7 +317,7 @@ final class Wooster_SharePoint_PDF_Block {
                 const canvas = document.createElement('canvas');
                 canvas.setAttribute('aria-label', 'Page ' + i);
 
-                // Visible placeholder size so you can confirm the update is live.
+                // Placeholder CSS size (full width).
                 canvas.style.width = w + 'px';
                 canvas.style.height = h + 'px';
 
@@ -329,6 +331,15 @@ final class Wooster_SharePoint_PDF_Block {
             scroller.appendChild(frag);
         }
 
+        function clearCanvasWhite(ctx, canvas) {
+            // Prevent “black pages” when canvas is opaque and/or a render fails mid-flight.
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+        }
+
         async function renderPage(pageNumber) {
             if (!pdfDoc) return;
             const rec = rendered.get(pageNumber);
@@ -339,14 +350,14 @@ final class Wooster_SharePoint_PDF_Block {
             try {
                 const page = await pdfDoc.getPage(pageNumber);
 
-                const w = safeScrollerWidth();
+                const w = innerScrollerWidth();
                 const viewport1 = page.getViewport({ scale: 1 });
                 const scale = Math.max(0.1, w / viewport1.width);
 
                 const viewport = page.getViewport({ scale });
                 const dpr = window.devicePixelRatio || 1;
 
-                // CSS size (layout)
+                // CSS size (layout): full width
                 rec.canvas.style.width = Math.round(viewport.width) + 'px';
                 rec.canvas.style.height = Math.round(viewport.height) + 'px';
 
@@ -354,7 +365,8 @@ final class Wooster_SharePoint_PDF_Block {
                 rec.canvas.width  = Math.floor(viewport.width * dpr);
                 rec.canvas.height = Math.floor(viewport.height * dpr);
 
-                const ctx = rec.canvas.getContext('2d', { alpha: false });
+                const ctx = rec.canvas.getContext('2d', { alpha: true });
+                clearCanvasWhite(ctx, rec.canvas);
 
                 await page.render({
                     canvasContext: ctx,
@@ -371,7 +383,6 @@ final class Wooster_SharePoint_PDF_Block {
             }
         }
 
-        // Fallback renderer: no IntersectionObserver required.
         function renderVisiblePages() {
             const top = scroller.scrollTop;
             const bottom = top + scroller.clientHeight;
@@ -381,7 +392,6 @@ final class Wooster_SharePoint_PDF_Block {
                 const rectTop = el.offsetTop;
                 const rectBottom = rectTop + el.offsetHeight;
 
-                // render if within +/- 1200px viewport band
                 if (rectBottom >= top - 1200 && rectTop <= bottom + 1200) {
                     renderPage(pn);
                 }
@@ -389,7 +399,6 @@ final class Wooster_SharePoint_PDF_Block {
         }
 
         function startObservers() {
-            // Try IntersectionObserver, but never let it prevent initial rendering.
             try {
                 if (!('IntersectionObserver' in window)) throw new Error('no IO');
 
@@ -407,7 +416,6 @@ final class Wooster_SharePoint_PDF_Block {
 
                 scroller.querySelectorAll('.page').forEach(el => io.observe(el));
             } catch (e) {
-                // Fallback: scroll-based rendering
                 scroller.addEventListener('scroll', () => requestAnimationFrame(renderVisiblePages), { passive: true });
                 renderVisiblePages();
             }
@@ -419,18 +427,16 @@ final class Wooster_SharePoint_PDF_Block {
             resizeTimer = setTimeout(() => {
                 if (!pdfDoc) return;
 
-                const w = safeScrollerWidth();
+                const w = innerScrollerWidth();
                 const h = Math.round(w * pageAspect);
 
                 for (const rec of rendered.values()) {
-                    // keep placeholders meaningful on resize
                     if (!rec.renderedOnce) {
                         rec.canvas.style.width = w + 'px';
                         rec.canvas.style.height = h + 'px';
                     }
                 }
 
-                // re-render rendered pages at new width
                 for (const [pn, rec] of rendered.entries()) {
                     if (rec.renderedOnce) {
                         rec.rendering = false;

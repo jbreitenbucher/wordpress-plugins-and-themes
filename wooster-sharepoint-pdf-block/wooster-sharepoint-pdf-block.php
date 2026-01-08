@@ -154,6 +154,7 @@ final class Wooster_SharePoint_PDF_Block {
     }
 
     /**
+     * STREAMED PROXY (prevents “loads pages but renders blank” caused by mangled binary output)
      * /wp-json/wspdf/v1/pdf?u=<b64url(share_url)>&fn=<filename>
      */
     public static function rest_pdf_proxy( WP_REST_Request $request ) {
@@ -175,26 +176,51 @@ final class Wooster_SharePoint_PDF_Block {
             return $download_url;
         }
 
+        $tmp = wp_tempnam( 'wspdf-' );
+        if ( ! $tmp ) {
+            return new WP_Error( 'wspdf_tmp_failed', 'Could not create temp file for streaming.', [ 'status' => 500 ] );
+        }
+
         $response = wp_remote_get(
             $download_url,
             [
-                'timeout'     => 30,
+                'timeout'     => 60,
                 'redirection' => 5,
+                'stream'      => true,
+                'filename'    => $tmp,
                 'headers'     => [
-                    'Accept' => 'application/pdf',
+                    'Accept'          => 'application/pdf',
+                    // Avoid compressed transfer edge cases when proxying binary.
+                    'Accept-Encoding' => 'identity',
                 ],
             ]
         );
 
         if ( is_wp_error( $response ) ) {
+            @unlink( $tmp );
             return new WP_Error( 'wspdf_fetch_failed', $response->get_error_message(), [ 'status' => 502 ] );
         }
 
         $code = (int) wp_remote_retrieve_response_code( $response );
-        $body = wp_remote_retrieve_body( $response );
-
-        if ( $code < 200 || $code >= 300 || $body === '' ) {
+        if ( $code < 200 || $code >= 300 ) {
+            @unlink( $tmp );
             return new WP_Error( 'wspdf_bad_response', 'Failed to retrieve PDF.', [ 'status' => 502, 'code' => $code ] );
+        }
+
+        if ( ! file_exists( $tmp ) || filesize( $tmp ) < 5 ) {
+            @unlink( $tmp );
+            return new WP_Error( 'wspdf_empty_pdf', 'Received empty PDF stream.', [ 'status' => 502 ] );
+        }
+
+        // Sanity check: should start with "%PDF-"
+        $fh   = @fopen( $tmp, 'rb' );
+        $head = $fh ? fread( $fh, 5 ) : '';
+        if ( $fh ) {
+            fclose( $fh );
+        }
+        if ( $head !== '%PDF-' ) {
+            @unlink( $tmp );
+            return new WP_Error( 'wspdf_not_pdf', 'Upstream did not return a PDF.', [ 'status' => 502 ] );
         }
 
         $filename = $fn !== '' ? sanitize_file_name( $fn ) : 'document.pdf';
@@ -202,17 +228,29 @@ final class Wooster_SharePoint_PDF_Block {
             $filename .= '.pdf';
         }
 
+        // Ensure nothing corrupts binary output.
+        @ini_set( 'zlib.output_compression', '0' );
+        while ( ob_get_level() ) {
+            ob_end_clean();
+        }
+
         nocache_headers();
         header( 'Content-Type: application/pdf' );
         header( 'X-Content-Type-Options: nosniff' );
         header( 'Content-Disposition: inline; filename="' . $filename . '"' );
+        header( 'Content-Length: ' . (string) filesize( $tmp ) );
 
-        echo $body;
+        readfile( $tmp );
+        @unlink( $tmp );
         exit;
     }
 
     /**
      * /wp-json/wspdf/v1/viewer?u=<b64url(share_url)>&fn=<filename>
+     * Minimal canvas-only renderer:
+     * - continuous scroll
+     * - fit-to-width (uses full iframe width)
+     * - no text layer / no annotation UI
      */
     public static function rest_viewer_html( WP_REST_Request $request ) {
         $u  = (string) $request->get_param( 'u' );
@@ -228,7 +266,7 @@ final class Wooster_SharePoint_PDF_Block {
 
         $pdf_url = add_query_arg(
             [
-                'u'  => self::b64url_encode( $share_url ),
+                'u'  => self::b64url_encode( trim( $share_url ) ),
                 'fn' => sanitize_file_name( (string) $fn ),
             ],
             rest_url( self::NS . '/pdf' )
@@ -252,7 +290,6 @@ final class Wooster_SharePoint_PDF_Block {
         body { background: #f3f4f6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
         #app { height: 100%; display: flex; flex-direction: column; }
         #status { padding: 10px 14px; font-size: 13px; color: #111827; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.08); }
-        /* Padding lives here; width calculations subtract it so pages truly fit-to-width */
         #scroller { flex: 1; overflow: auto; padding: 12px; box-sizing: border-box; }
         .page { display: flex; justify-content: center; margin: 0 auto 14px auto; width: 100%; }
         canvas { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-radius: 6px; display: block; }
@@ -287,7 +324,6 @@ final class Wooster_SharePoint_PDF_Block {
         const rendered = new Map(); // pageNumber -> { canvas, rendering, renderedOnce }
 
         function innerScrollerWidth() {
-            // Fit-to-width means "use the iframe viewer width" (minus scroller padding).
             const cs = getComputedStyle(scroller);
             const padL = parseFloat(cs.paddingLeft) || 0;
             const padR = parseFloat(cs.paddingRight) || 0;
@@ -316,13 +352,10 @@ final class Wooster_SharePoint_PDF_Block {
 
                 const canvas = document.createElement('canvas');
                 canvas.setAttribute('aria-label', 'Page ' + i);
-
-                // Placeholder CSS size (full width).
                 canvas.style.width = w + 'px';
                 canvas.style.height = h + 'px';
 
                 wrap.appendChild(canvas);
-
                 rendered.set(i, { canvas, rendering: false, renderedOnce: false });
                 frag.appendChild(wrap);
             }
@@ -332,7 +365,6 @@ final class Wooster_SharePoint_PDF_Block {
         }
 
         function clearCanvasWhite(ctx, canvas) {
-            // Prevent “black pages” when canvas is opaque and/or a render fails mid-flight.
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.fillStyle = '#ffffff';
@@ -357,11 +389,9 @@ final class Wooster_SharePoint_PDF_Block {
                 const viewport = page.getViewport({ scale });
                 const dpr = window.devicePixelRatio || 1;
 
-                // CSS size (layout): full width
                 rec.canvas.style.width = Math.round(viewport.width) + 'px';
                 rec.canvas.style.height = Math.round(viewport.height) + 'px';
 
-                // Backing buffer (paint)
                 rec.canvas.width  = Math.floor(viewport.width * dpr);
                 rec.canvas.height = Math.floor(viewport.height * dpr);
 
@@ -474,7 +504,6 @@ final class Wooster_SharePoint_PDF_Block {
                 buildPlaceholders(pageCount);
                 startObservers();
 
-                // Force initial renders after layout settles.
                 requestAnimationFrame(() => renderPage(1));
                 requestAnimationFrame(() => renderPage(2));
             } catch (e) {
@@ -537,6 +566,14 @@ final class Wooster_SharePoint_PDF_Block {
         );
     }
 
+    /**
+     * Handles:
+     * - /sites/<SITE>/...
+     * - /teams/<TEAM>/...
+     * - /:b:/s/<SITE>/<TOKEN>...
+     * - /:u:/s/<SITE>/<TOKEN>...
+     * - /r/sites/<SITE>/...
+     */
     private static function extract_site_from_path( string $path ) : string {
         $path = rawurldecode( trim( $path, '/' ) );
         if ( $path === '' ) {

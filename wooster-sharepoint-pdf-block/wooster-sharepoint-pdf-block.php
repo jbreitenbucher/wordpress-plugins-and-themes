@@ -75,13 +75,11 @@ final class Wooster_SharePoint_PDF_Block {
             rest_url( self::NS . '/viewer' )
         );
 
-        $iframe = sprintf(
-            '<iframe class="wspdf-viewer" src="%s" style="width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe>',
+        return sprintf(
+            '<div class="wspdf-embed"><iframe class="wspdf-viewer" src="%s" style="width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe></div>',
             esc_url( $viewer_url ),
             (int) $height
         );
-
-        return '<div class="wspdf-embed">' . $iframe . '</div>';
     }
 
     public static function register_rest_routes() : void {
@@ -128,6 +126,9 @@ final class Wooster_SharePoint_PDF_Block {
         );
     }
 
+    /**
+     * /wp-json/wspdf/v1/asset?f=pdf|worker
+     */
     public static function rest_asset( WP_REST_Request $request ) {
         $f = (string) $request->get_param( 'f' );
 
@@ -154,6 +155,9 @@ final class Wooster_SharePoint_PDF_Block {
         exit;
     }
 
+    /**
+     * /wp-json/wspdf/v1/pdf?u=<b64url(share_url)>&fn=<filename>
+     */
     public static function rest_pdf_proxy( WP_REST_Request $request ) {
         $u  = (string) $request->get_param( 'u' );
         $fn = (string) $request->get_param( 'fn' );
@@ -209,6 +213,9 @@ final class Wooster_SharePoint_PDF_Block {
         exit;
     }
 
+    /**
+     * /wp-json/wspdf/v1/viewer?u=<b64url(share_url)>&fn=<filename>
+     */
     public static function rest_viewer_html( WP_REST_Request $request ) {
         $u  = (string) $request->get_param( 'u' );
         $fn = (string) $request->get_param( 'fn' );
@@ -235,7 +242,6 @@ final class Wooster_SharePoint_PDF_Block {
 
         nocache_headers();
         header( 'Content-Type: text/html; charset=utf-8' );
-
         ?>
 <!doctype html>
 <html lang="en">
@@ -255,11 +261,10 @@ final class Wooster_SharePoint_PDF_Block {
             width: 100%;
         }
         canvas {
-            width: min(100%, 980px);
-            height: auto;
-            background: white;
+            background: #fff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.12);
             border-radius: 6px;
+            display: block;
         }
         #status {
             padding: 10px 14px;
@@ -296,59 +301,46 @@ final class Wooster_SharePoint_PDF_Block {
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
         let pdfDoc = null;
-        const rendered = new Map(); // pageNumber -> { canvas, rendering }
+        let pageCount = 0;
 
-        function fitWidthScale(page) {
-            const containerWidth = Math.min(scroller.clientWidth, 980) - 24;
-            const viewport1 = page.getViewport({ scale: 1 });
-            const scale = containerWidth / viewport1.width;
-            return Math.max(0.1, scale);
+        // Based on page 1 aspect ratio to ensure placeholders have real height.
+        let pageAspect = 1.294; // fallback ~ letter-ish
+        const rendered = new Map(); // pageNumber -> { canvas, rendering, renderedOnce }
+
+        function containerWidth() {
+            // Fit-to-width, but cap the max for readability.
+            return Math.max(320, Math.min(scroller.clientWidth, 980) - 24);
         }
 
-        async function renderPage(pageNumber) {
-            if (!pdfDoc) return;
-            const rec = rendered.get(pageNumber);
-            if (!rec || rec.rendering) return;
-
-            rec.rendering = true;
-
-            try {
-                const page = await pdfDoc.getPage(pageNumber);
-                const scale = fitWidthScale(page);
-                const viewport = page.getViewport({ scale });
-                const dpr = window.devicePixelRatio || 1;
-
-                rec.canvas.width  = Math.floor(viewport.width * dpr);
-                rec.canvas.height = Math.floor(viewport.height * dpr);
-
-                const ctx = rec.canvas.getContext('2d', { alpha: false });
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-                await page.render({
-                    canvasContext: ctx,
-                    viewport: viewport,
-                    intent: 'display'
-                }).promise;
-
-                rec.rendering = false;
-            } catch (e) {
-                rec.rendering = false;
-            }
+        async function computeAspectFromFirstPage() {
+            const p1 = await pdfDoc.getPage(1);
+            const v1 = p1.getViewport({ scale: 1 });
+            pageAspect = v1.height / v1.width;
         }
 
         function buildPlaceholders(numPages) {
             const frag = document.createDocumentFragment();
+            const w = containerWidth();
+            const h = Math.round(w * pageAspect);
 
             for (let i = 1; i <= numPages; i++) {
                 const wrap = document.createElement('div');
                 wrap.className = 'page';
                 wrap.dataset.pageNumber = String(i);
 
+                // Non-zero height so it’s visible and observable before render.
+                wrap.style.minHeight = h + 'px';
+
                 const canvas = document.createElement('canvas');
                 canvas.setAttribute('aria-label', 'Page ' + i);
+
+                // Placeholder CSS size (updated on real render).
+                canvas.style.width = w + 'px';
+                canvas.style.height = h + 'px';
+
                 wrap.appendChild(canvas);
 
-                rendered.set(i, { canvas, rendering: false });
+                rendered.set(i, { canvas, rendering: false, renderedOnce: false });
                 frag.appendChild(wrap);
             }
 
@@ -365,11 +357,59 @@ final class Wooster_SharePoint_PDF_Block {
                 }
             }, {
                 root: scroller,
-                rootMargin: '800px 0px',
+                rootMargin: '900px 0px',
                 threshold: 0.01
             });
 
             scroller.querySelectorAll('.page').forEach(el => io.observe(el));
+        }
+
+        async function renderPage(pageNumber) {
+            if (!pdfDoc) return;
+            const rec = rendered.get(pageNumber);
+            if (!rec || rec.rendering) return;
+
+            rec.rendering = true;
+
+            try {
+                const page = await pdfDoc.getPage(pageNumber);
+
+                // Fit-to-width scale (in CSS pixels).
+                const w = containerWidth();
+                const viewport1 = page.getViewport({ scale: 1 });
+                const scale = Math.max(0.1, w / viewport1.width);
+
+                const viewport = page.getViewport({ scale });
+                const dpr = window.devicePixelRatio || 1;
+
+                // Set CSS size explicitly (so the page takes space even if re-rendering).
+                rec.canvas.style.width = Math.round(viewport.width) + 'px';
+                rec.canvas.style.height = Math.round(viewport.height) + 'px';
+
+                // Backing buffer for crispness.
+                rec.canvas.width  = Math.floor(viewport.width * dpr);
+                rec.canvas.height = Math.floor(viewport.height * dpr);
+
+                const ctx = rec.canvas.getContext('2d', { alpha: false });
+
+                // Use pdf.js transform rather than pre-scaling the context.
+                await page.render({
+                    canvasContext: ctx,
+                    viewport: viewport,
+                    transform: [dpr, 0, 0, dpr, 0, 0],
+                    intent: 'display'
+                }).promise;
+
+                rec.renderedOnce = true;
+                rec.rendering = false;
+            } catch (e) {
+                rec.rendering = false;
+                // Don’t spam—only surface the first render error.
+                if (!statusEl.dataset.renderErrorShown) {
+                    statusEl.dataset.renderErrorShown = '1';
+                    setStatus('Render failed on page ' + pageNumber + '.');
+                }
+            }
         }
 
         let resizeTimer = null;
@@ -377,18 +417,28 @@ final class Wooster_SharePoint_PDF_Block {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 if (!pdfDoc) return;
+
+                const w = containerWidth();
+                const h = Math.round(w * pageAspect);
+
+                // Update placeholder sizes immediately.
+                for (const rec of rendered.values()) {
+                    rec.canvas.style.width = w + 'px';
+                    rec.canvas.style.height = h + 'px';
+                }
+
+                // Re-render pages that have rendered at least once.
                 for (const [pageNumber, rec] of rendered.entries()) {
-                    if (rec.canvas.width > 0 && rec.canvas.height > 0) {
+                    if (rec.renderedOnce) {
                         rec.rendering = false;
                         renderPage(pageNumber);
                     }
                 }
-            }, 150);
+            }, 160);
         }
         window.addEventListener('resize', handleResize);
 
         async function getFailureHint() {
-            // Only called on failure (so no double-download on success).
             try {
                 const r = await fetch(pdfUrl, { method: 'GET', cache: 'no-store' });
                 const ct = (r.headers.get('content-type') || '').toLowerCase();
@@ -403,17 +453,24 @@ final class Wooster_SharePoint_PDF_Block {
         (async function init() {
             try {
                 setStatus('Loading PDF…');
+
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     withCredentials: false
                 });
-                pdfDoc = await loadingTask.promise;
 
-                const pageCount = pdfDoc.numPages;
+                pdfDoc = await loadingTask.promise;
+                pageCount = pdfDoc.numPages;
+
+                // IMPORTANT: compute aspect from page 1 so placeholders have height.
+                await computeAspectFromFirstPage();
+
                 setStatus('Loaded ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') + '.');
 
                 buildPlaceholders(pageCount);
                 observeAndLazyRender();
+
+                // Render page 1 immediately so something appears fast.
                 renderPage(1);
             } catch (e) {
                 const hint = await getFailureHint();
@@ -475,14 +532,6 @@ final class Wooster_SharePoint_PDF_Block {
         );
     }
 
-    /**
-     * More robust site extraction. Handles:
-     * - /sites/<SITE>/...
-     * - /teams/<TEAM>/...
-     * - /:b:/s/<SITE>/<TOKEN>...
-     * - /:u:/s/<SITE>/<TOKEN>...
-     * - /r/sites/<SITE>/...
-     */
     private static function extract_site_from_path( string $path ) : string {
         $path = rawurldecode( trim( $path, '/' ) );
         if ( $path === '' ) {

@@ -31,7 +31,6 @@ final class Wooster_SharePoint_PDF_Block {
             true
         );
 
-        // Provide REST base to block.js (no debug text, no category creation here).
         wp_localize_script(
             $handle,
             'wspdfBlock',
@@ -82,7 +81,6 @@ final class Wooster_SharePoint_PDF_Block {
             (int) $height
         );
 
-        // Wrapper helps theme spacing, but is optional.
         return '<div class="wspdf-embed">' . $iframe . '</div>';
     }
 
@@ -101,7 +99,7 @@ final class Wooster_SharePoint_PDF_Block {
             ]
         );
 
-        // IMPORTANT: This must *echo HTML and exit* (not JSON) to avoid "\r\n\r\n..." escaped junk.
+        // Echo HTML and exit (NOT JSON) to avoid escaped newline junk.
         register_rest_route(
             self::NS,
             '/viewer',
@@ -130,10 +128,6 @@ final class Wooster_SharePoint_PDF_Block {
         );
     }
 
-    /**
-     * /wp-json/wspdf/v1/asset?f=pdf|worker
-     * Streams assets/pdfjs/pdf.min.js and assets/pdfjs/pdf.worker.min.js with explicit JS content-type.
-     */
     public static function rest_asset( WP_REST_Request $request ) {
         $f = (string) $request->get_param( 'f' );
 
@@ -151,7 +145,6 @@ final class Wooster_SharePoint_PDF_Block {
             return new WP_Error( 'wspdf_missing_asset', 'Asset not found.', [ 'status' => 404 ] );
         }
 
-        // Stream file with correct MIME type.
         nocache_headers();
         header( 'Content-Type: application/javascript; charset=utf-8' );
         header( 'X-Content-Type-Options: nosniff' );
@@ -161,10 +154,6 @@ final class Wooster_SharePoint_PDF_Block {
         exit;
     }
 
-    /**
-     * /wp-json/wspdf/v1/pdf?u=<base64url(original_share_url)>&fn=<filename>
-     * Proxies the PDF bytes from SharePoint download endpoint.
-     */
     public static function rest_pdf_proxy( WP_REST_Request $request ) {
         $u  = (string) $request->get_param( 'u' );
         $fn = (string) $request->get_param( 'fn' );
@@ -211,7 +200,6 @@ final class Wooster_SharePoint_PDF_Block {
             $filename .= '.pdf';
         }
 
-        // Stream PDF bytes.
         nocache_headers();
         header( 'Content-Type: application/pdf' );
         header( 'X-Content-Type-Options: nosniff' );
@@ -221,11 +209,6 @@ final class Wooster_SharePoint_PDF_Block {
         exit;
     }
 
-    /**
-     * /wp-json/wspdf/v1/viewer?u=<base64url(original_share_url)>&fn=<filename>
-     * Echoes minimal HTML that loads PDF.js via REST asset route and renders pages continuously, fit-to-width,
-     * with NO text layer and NO annotation tools/UI.
-     */
     public static function rest_viewer_html( WP_REST_Request $request ) {
         $u  = (string) $request->get_param( 'u' );
         $fn = (string) $request->get_param( 'fn' );
@@ -250,7 +233,6 @@ final class Wooster_SharePoint_PDF_Block {
         $worker_url  = add_query_arg( [ 'f' => 'worker' ], rest_url( self::NS . '/asset' ) );
         $title_label = $fn ? esc_html( (string) $fn ) : 'PDF';
 
-        // Output real HTML (NOT JSON).
         nocache_headers();
         header( 'Content-Type: text/html; charset=utf-8' );
 
@@ -273,7 +255,7 @@ final class Wooster_SharePoint_PDF_Block {
             width: 100%;
         }
         canvas {
-            width: min(100%, 980px); /* fit-to-width with a sensible max */
+            width: min(100%, 980px);
             height: auto;
             background: white;
             box-shadow: 0 2px 8px rgba(0,0,0,0.12);
@@ -304,24 +286,20 @@ final class Wooster_SharePoint_PDF_Block {
         const statusEl = document.getElementById('status');
         const scroller = document.getElementById('scroller');
 
+        function setStatus(msg) { statusEl.textContent = msg; }
+
         if (!window.pdfjsLib) {
-            statusEl.textContent = 'PDF.js failed to load.';
+            setStatus('PDF.js failed to load.');
             return;
         }
 
-        // Explicit worker route (served via REST with proper JS MIME).
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
         let pdfDoc = null;
-        let pageCount = 0;
         const rendered = new Map(); // pageNumber -> { canvas, rendering }
 
-        function setStatus(msg) {
-            statusEl.textContent = msg;
-        }
-
         function fitWidthScale(page) {
-            const containerWidth = Math.min(scroller.clientWidth, 980) - 24; // padding-ish
+            const containerWidth = Math.min(scroller.clientWidth, 980) - 24;
             const viewport1 = page.getViewport({ scale: 1 });
             const scale = containerWidth / viewport1.width;
             return Math.max(0.1, scale);
@@ -337,12 +315,9 @@ final class Wooster_SharePoint_PDF_Block {
             try {
                 const page = await pdfDoc.getPage(pageNumber);
                 const scale = fitWidthScale(page);
-
                 const viewport = page.getViewport({ scale });
                 const dpr = window.devicePixelRatio || 1;
 
-                // CSS size is handled by canvas { width: ...; height: auto }.
-                // Actual buffer size must be scaled for crispness.
                 rec.canvas.width  = Math.floor(viewport.width * dpr);
                 rec.canvas.height = Math.floor(viewport.height * dpr);
 
@@ -352,8 +327,7 @@ final class Wooster_SharePoint_PDF_Block {
                 await page.render({
                     canvasContext: ctx,
                     viewport: viewport,
-                    // No text layer, no annotation layer: pure canvas render.
-                    intent: 'display',
+                    intent: 'display'
                 }).promise;
 
                 rec.rendering = false;
@@ -391,8 +365,8 @@ final class Wooster_SharePoint_PDF_Block {
                 }
             }, {
                 root: scroller,
-                rootMargin: '800px 0px', // pre-render ahead for smooth scrolling
-                threshold: 0.01,
+                rootMargin: '800px 0px',
+                threshold: 0.01
             });
 
             scroller.querySelectorAll('.page').forEach(el => io.observe(el));
@@ -400,22 +374,31 @@ final class Wooster_SharePoint_PDF_Block {
 
         let resizeTimer = null;
         function handleResize() {
-            // Re-render pages that have been rendered at least once.
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 if (!pdfDoc) return;
                 for (const [pageNumber, rec] of rendered.entries()) {
-                    // If canvas has a buffer, it was rendered.
                     if (rec.canvas.width > 0 && rec.canvas.height > 0) {
-                        // Mark not rendering and rerender (recompute scale).
                         rec.rendering = false;
                         renderPage(pageNumber);
                     }
                 }
             }, 150);
         }
-
         window.addEventListener('resize', handleResize);
+
+        async function getFailureHint() {
+            // Only called on failure (so no double-download on success).
+            try {
+                const r = await fetch(pdfUrl, { method: 'GET', cache: 'no-store' });
+                const ct = (r.headers.get('content-type') || '').toLowerCase();
+                if (!r.ok) return 'HTTP ' + r.status;
+                if (!ct.includes('application/pdf')) return 'Unexpected content-type';
+                return 'Unknown';
+            } catch (e) {
+                return 'Network error';
+            }
+        }
 
         (async function init() {
             try {
@@ -425,17 +408,16 @@ final class Wooster_SharePoint_PDF_Block {
                     withCredentials: false
                 });
                 pdfDoc = await loadingTask.promise;
-                pageCount = pdfDoc.numPages;
 
+                const pageCount = pdfDoc.numPages;
                 setStatus('Loaded ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') + '.');
 
                 buildPlaceholders(pageCount);
                 observeAndLazyRender();
-
-                // Render the first page immediately so the user sees something fast.
                 renderPage(1);
             } catch (e) {
-                setStatus('Failed to load PDF.');
+                const hint = await getFailureHint();
+                setStatus('Failed to load PDF (' + hint + ').');
             }
         })();
     })();
@@ -459,10 +441,6 @@ final class Wooster_SharePoint_PDF_Block {
         return strtolower( $parts['host'] ) === self::TENANT_HOST;
     }
 
-    /**
-     * Converts an "Anyone" share link into:
-     * https://livewooster.sharepoint.com/sites/<SITE>/_layouts/15/download.aspx?share=<TOKEN>
-     */
     private static function share_to_download_url( string $share_url ) {
         $parts = wp_parse_url( $share_url );
         if ( ! is_array( $parts ) ) {
@@ -475,12 +453,11 @@ final class Wooster_SharePoint_PDF_Block {
             parse_str( $parts['query'], $query );
         }
 
-        // If it's already a download endpoint with a share param, accept it.
         if ( strpos( $path, '/_layouts/15/download.aspx' ) !== false && ! empty( $query['share'] ) ) {
             return $share_url;
         }
 
-        $site = self::extract_site_from_path( $path );
+        $site = self::extract_site_from_path( (string) $path );
         if ( ! $site ) {
             return new WP_Error( 'wspdf_no_site', 'Could not determine SharePoint site from URL path.', [ 'status' => 400 ] );
         }
@@ -490,40 +467,56 @@ final class Wooster_SharePoint_PDF_Block {
             return new WP_Error( 'wspdf_no_token', 'Could not extract share token from URL.', [ 'status' => 400 ] );
         }
 
-        $download = sprintf(
+        return sprintf(
             'https://%s/sites/%s/_layouts/15/download.aspx?share=%s',
             self::TENANT_HOST,
             rawurlencode( $site ),
             rawurlencode( $token )
         );
-
-        return $download;
     }
 
+    /**
+     * More robust site extraction. Handles:
+     * - /sites/<SITE>/...
+     * - /teams/<TEAM>/...
+     * - /:b:/s/<SITE>/<TOKEN>...
+     * - /:u:/s/<SITE>/<TOKEN>...
+     * - /r/sites/<SITE>/...
+     */
     private static function extract_site_from_path( string $path ) : string {
-        $path = trim( $path, '/' );
+        $path = rawurldecode( trim( $path, '/' ) );
         if ( $path === '' ) {
             return '';
         }
+
         $segs = explode( '/', $path );
 
-        // Typical: /sites/<SITE>/...
         $idx = array_search( 'sites', $segs, true );
         if ( $idx !== false && isset( $segs[ $idx + 1 ] ) ) {
             return $segs[ $idx + 1 ];
         }
 
-        // Some tenants use /teams/<TEAM>/...
         $idx = array_search( 'teams', $segs, true );
         if ( $idx !== false && isset( $segs[ $idx + 1 ] ) ) {
             return $segs[ $idx + 1 ];
+        }
+
+        // Share links often use /:b:/s/<SITE>/<TOKEN> or /:u:/s/<SITE>/<TOKEN>
+        $idx = array_search( 's', $segs, true );
+        if ( $idx !== false && isset( $segs[ $idx + 1 ] ) ) {
+            return $segs[ $idx + 1 ];
+        }
+
+        // Some links use /r/sites/<SITE>/...
+        $idx = array_search( 'r', $segs, true );
+        if ( $idx !== false && isset( $segs[ $idx + 2 ] ) && isset( $segs[ $idx + 1 ] ) && $segs[ $idx + 1 ] === 'sites' ) {
+            return $segs[ $idx + 2 ];
         }
 
         return '';
     }
 
     private static function extract_share_token( array $parts, array $query ) : string {
-        // Common: ?share=<TOKEN> or ?surl=<TOKEN>
         if ( ! empty( $query['share'] ) && is_string( $query['share'] ) ) {
             return $query['share'];
         }
@@ -531,16 +524,12 @@ final class Wooster_SharePoint_PDF_Block {
             return $query['surl'];
         }
 
-        // Short share links often place the token as the last path segment:
-        // https://livewooster.sharepoint.com/:b:/s/<SITE>/<TOKEN>?e=...
         $path = isset( $parts['path'] ) ? trim( (string) $parts['path'], '/' ) : '';
         if ( $path !== '' ) {
             $segs = explode( '/', $path );
             $last = end( $segs );
             if ( is_string( $last ) ) {
                 $last = rawurldecode( $last );
-
-                // Accept token-y looking segments.
                 if ( preg_match( '/^[A-Za-z0-9\-_]{10,}$/', $last ) ) {
                     return $last;
                 }

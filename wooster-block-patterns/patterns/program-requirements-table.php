@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Program requirements table
  * Slug: wooster-block-patterns/program-requirements-table

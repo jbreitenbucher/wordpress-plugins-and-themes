@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Updates grid: query loop (3 columns)
  * Slug: wooster-block-patterns/updates-grid

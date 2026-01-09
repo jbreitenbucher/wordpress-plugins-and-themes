@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Mixed media article (gallery + wrapped images + text)
  * Slug: wooster-block-patterns/mixed-media-article

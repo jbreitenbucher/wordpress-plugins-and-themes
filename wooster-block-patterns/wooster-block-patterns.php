@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Wooster Block Patterns
  * Description:       Curated block patterns and custom blocks for College of Wooster department and office sites.
- * Version:           1.4.0
+ * Version:           1.4.1
  * Author:            College of Wooster (Jon Breitenbucher)
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -23,13 +23,6 @@ if ( ! defined( 'WBP_PLUGIN_PATH' ) ) {
 if ( ! defined( 'WBP_ASSETS_URL' ) ) {
 	define( 'WBP_ASSETS_URL', WBP_PLUGIN_URL . 'assets/' );
 }
-
-/**
- * i18n
- */
-add_action( 'init', function() {
-	load_plugin_textdomain( 'wooster-block-patterns' );
-} );
 
 /**
  * Pattern categories (for Patterns UI)
@@ -108,24 +101,29 @@ add_action( 'init', function() {
  * Block category for our custom blocks (Blocks UI, not Patterns)
  * Make sure the slug matches the one used in block.json ("wbp-content").
  */
-add_filter( 'block_categories_all', function( $categories, $post ) {
+add_filter( 'block_categories_all', function( $categories, $editor_context ) {
 	$slug  = 'wbp-content';
 	$title = __( 'Wooster Blocks', 'wooster-block-patterns' );
+	$icon  = 'layout';
 
 	$found = false;
 	foreach ( $categories as &$cat ) {
 		if ( ! empty( $cat['slug'] ) && $cat['slug'] === $slug ) {
-			$cat['title'] = $title; // enforce our label if the slug already exists
+			// Enforce our label/icon if the slug already exists.
+			$cat['title'] = $title;
+			$cat['icon']  = $icon;
 			$found = true;
 			break;
 		}
 	}
 
 	if ( ! $found ) {
-		$categories[] = array(
+		// Put our category first so editors can find it quickly.
+		array_unshift( $categories, array(
 			'slug'  => $slug,
 			'title' => $title,
-		);
+			'icon'  => $icon,
+		) );
 	}
 
 	return $categories;
@@ -160,18 +158,14 @@ add_action( 'init', function() {
 			'style'         => 'wbp-accordion-style',
 			'view_script'   => 'wbp-accordion-view',
 		) );
-	} else {
-		error_log( 'WBP: missing block.json at ' . $accordion_path );
-	}
+	} // else: missing block.json; silently skip.
 
 	if ( file_exists( $accordion_item_path . '/block.json' ) ) {
 		register_block_type( $accordion_item_path, array(
 			'editor_script' => 'wbp-accordion-item-editor',
 			'style'         => 'wbp-accordion-style',
 		) );
-	} else {
-		error_log( 'WBP: missing block.json at ' . $accordion_item_path );
-	}
+	} // else: missing block.json; silently skip.
 
 	/* ========= TOC ========= */
 	$toc_style_rel        = '/blocks/toc/style.css';
@@ -203,9 +197,7 @@ add_action( 'init', function() {
 				return '';
 			},
 		) );
-	} else {
-		error_log( 'WBP: missing block.json at ' . $toc_path );
-	}
+	} // else: missing block.json; silently skip.
 } );
 
 /**

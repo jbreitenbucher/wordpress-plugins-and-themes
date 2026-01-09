@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: FAQ Accordion (custom block)
  * Slug: wooster-block-patterns/faq-accordion

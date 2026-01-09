@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Section landing: left nav + content + toc
  * Slug: wooster-block-patterns/section-landing-leftnav

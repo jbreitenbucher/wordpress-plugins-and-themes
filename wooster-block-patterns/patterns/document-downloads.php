@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Documents: two-column downloads
  * Slug: wooster-block-patterns/document-downloads

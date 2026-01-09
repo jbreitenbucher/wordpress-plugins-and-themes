@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Person card
  * Slug: wooster-block-patterns/person-card

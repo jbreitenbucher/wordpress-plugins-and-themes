@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: News article: standard + related links
  * Slug: wooster-block-patterns/news-article-standard

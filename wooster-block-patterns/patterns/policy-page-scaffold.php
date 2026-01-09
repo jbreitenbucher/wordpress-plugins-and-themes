@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Policy page scaffold
  * Slug: wooster-block-patterns/policy-page-scaffold

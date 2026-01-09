@@ -1,4 +1,6 @@
 <?php
+defined( 'ABSPATH' ) || exit;
+defined( 'ABSPATH' ) || exit;
 /**
  * Server render for TOC block (H2..H{maxDepth}, no per-level toggles).
  *
@@ -141,5 +143,3 @@ if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 		return ob_get_clean();
 	}
 }
-
-return wbp_render_toc_block( $attributes, $content );

@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Alert banner (info)
  * Slug: wooster-block-patterns/alert-banner

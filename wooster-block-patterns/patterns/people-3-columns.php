@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: People: three columns
  * Slug: wooster-block-patterns/people-3-columns

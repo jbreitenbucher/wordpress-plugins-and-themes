@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Department home: split hero + highlights + dates
  * Slug: wooster-block-patterns/department-home-split-hero-highlights

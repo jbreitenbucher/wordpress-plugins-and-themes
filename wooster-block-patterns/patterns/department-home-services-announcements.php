@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Department home: service tiles + announcements + hours
  * Slug: wooster-block-patterns/department-home-services-announcements

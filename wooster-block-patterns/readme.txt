@@ -1,12 +1,12 @@
 === Wooster Block Patterns ===
-Contributors: The College of Wooster (Jon Breitenbucher)
+Contributors: woosterit
 Requires at least: 6.5
-Tested up to: 6.8
+Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-Tags: block editor, patterns, custom blocks, departments, college, university
+Tags: block editor, patterns, custom blocks, departments, accessibility
 
 Curated block patterns and custom blocks for university department and office sites. Accessible, editor-friendly, and theme-agnostic.
 
@@ -84,6 +84,9 @@ We ship placeholders in `assets/images/` and reference them so patterns work wit
 - CSS is enqueued in both editor and front end and versioned via `filemtime` to avoid stale caches.
 
 == Changelog ==
+
+= 1.4.1 =
+* Ensures the **Wooster Blocks** inserter category (slug `wbp-content`) is always registered (and shown first), so custom blocks never fall back to Uncategorized.
 
 = 1.3.5 =
 * **New:** Table of Contents block (`wbp/toc`) with include-levels, max depth, and “Collapse by default.” Accessible markup and editor collapse toggle.

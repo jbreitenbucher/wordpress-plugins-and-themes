@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 /**
  * Title: Department home: audience gateways + news
  * Slug: wooster-block-patterns/department-home-audiences-news

@@ -3,7 +3,7 @@
  * Plugin Name:       Wooster SharePoint PDF Block
  * Description:       Gutenberg block to embed SharePoint PDFs via “Anyone” share links using a self-hosted PDF.js viewer (no Media Library uploads, no raw-PDF iframe).
  * Version:           1.0.0
- * Author:            Wooster
+ * Author:            The College of Wooster
  * License:           GPL-2.0-or-later
  */
 
@@ -18,6 +18,49 @@ final class Wooster_SharePoint_PDF_Block {
     public static function init() : void {
         add_action( 'init', [ __CLASS__, 'register_block' ] );
         add_action( 'rest_api_init', [ __CLASS__, 'register_rest_routes' ] );
+
+        // Ensure the Wooster Blocks category exists (slug: wbp-content).
+        // block_categories_all is the modern filter (WP 5.8+). We also register the legacy filter
+        // for older sites, without creating duplicates.
+        add_filter( 'block_categories_all', [ __CLASS__, 'filter_block_categories' ], 10, 2 );
+        add_filter( 'block_categories', [ __CLASS__, 'filter_block_categories_legacy' ], 10, 2 );
+    }
+
+    /**
+     * Add the Wooster Blocks category (wbp-content) if missing.
+     *
+     * @param array $categories Existing categories.
+     * @param mixed $post       Current post.
+     * @return array
+     */
+    public static function filter_block_categories( array $categories, $post ) : array {
+        $slug = 'wbp-content';
+
+        foreach ( $categories as $cat ) {
+            if ( isset( $cat['slug'] ) && $cat['slug'] === $slug ) {
+                return $categories;
+            }
+        }
+
+        $categories[] = [
+            'slug'  => $slug,
+            'title' => __( 'Wooster Blocks', 'wspdf' ),
+            'icon'  => null,
+        ];
+
+        return $categories;
+    }
+
+    /**
+     * Legacy filter signature for pre-5.8 sites.
+     *
+     * @param array $categories Existing categories.
+     * @param mixed $post       Current post.
+     * @return array
+     */
+    public static function filter_block_categories_legacy( array $categories, $post ) : array {
+        // The legacy filter provides arrays of ['slug' => ..., 'title' => ...].
+        return self::filter_block_categories( $categories, $post );
     }
 
     public static function register_block() : void {
@@ -95,6 +138,7 @@ final class Wooster_SharePoint_PDF_Block {
                 'args'                => [
                     'u'  => [ 'required' => true ],
                     'fn' => [ 'required' => false ],
+                    'dl' => [ 'required' => false ],
                 ],
             ]
         );
@@ -154,6 +198,8 @@ final class Wooster_SharePoint_PDF_Block {
         header( 'X-Content-Type-Options: nosniff' );
         header( 'Cache-Control: public, max-age=86400' );
 
+        // Streaming is intentional here; these files are shipped with the plugin.
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
         readfile( $path );
         exit;
     }
@@ -202,29 +248,33 @@ final class Wooster_SharePoint_PDF_Block {
         );
 
         if ( is_wp_error( $response ) ) {
-            @unlink( $tmp );
+            wp_delete_file( $tmp );
             return new WP_Error( 'wspdf_fetch_failed', $response->get_error_message(), [ 'status' => 502 ] );
         }
 
         $code = (int) wp_remote_retrieve_response_code( $response );
         if ( $code < 200 || $code >= 300 ) {
-            @unlink( $tmp );
+            wp_delete_file( $tmp );
             return new WP_Error( 'wspdf_bad_response', 'Failed to retrieve PDF.', [ 'status' => 502, 'code' => $code ] );
         }
 
         if ( ! file_exists( $tmp ) || filesize( $tmp ) < 5 ) {
-            @unlink( $tmp );
+            wp_delete_file( $tmp );
             return new WP_Error( 'wspdf_empty_pdf', 'Received empty PDF stream.', [ 'status' => 502 ] );
         }
 
         // Sanity check: should start with "%PDF-"
+        // Read a tiny header to confirm this is a PDF (defensive against HTML error pages).
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
         $fh   = @fopen( $tmp, 'rb' );
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
         $head = $fh ? fread( $fh, 5 ) : '';
         if ( $fh ) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
             fclose( $fh );
         }
         if ( $head !== '%PDF-' ) {
-            @unlink( $tmp );
+            wp_delete_file( $tmp );
             return new WP_Error( 'wspdf_not_pdf', 'Upstream did not return a PDF.', [ 'status' => 502 ] );
         }
 
@@ -234,7 +284,6 @@ final class Wooster_SharePoint_PDF_Block {
         }
 
         // Ensure nothing corrupts binary output.
-        @ini_set( 'zlib.output_compression', '0' );
         while ( ob_get_level() ) {
             ob_end_clean();
         }
@@ -248,8 +297,10 @@ final class Wooster_SharePoint_PDF_Block {
         header( 'Content-Disposition: ' . $disposition . '; filename="' . $filename . '"' );
         header( 'Content-Length: ' . (string) filesize( $tmp ) );
 
+        // Stream the file to the browser. Avoid loading large PDFs into memory.
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
         readfile( $tmp );
-        @unlink( $tmp );
+        wp_delete_file( $tmp );
         exit;
     }
 
@@ -287,7 +338,7 @@ final class Wooster_SharePoint_PDF_Block {
 
         $pdfjs_url   = add_query_arg( [ 'f' => 'pdf' ], rest_url( self::NS . '/asset' ) );
         $worker_url  = add_query_arg( [ 'f' => 'worker' ], rest_url( self::NS . '/asset' ) );
-        $title_label = $fn ? esc_html( (string) $fn ) : 'PDF';
+        $title_label = $fn ? (string) $fn : 'PDF';
 
         nocache_headers();
         header( 'Content-Type: text/html; charset=utf-8' );
@@ -297,7 +348,7 @@ final class Wooster_SharePoint_PDF_Block {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo $title_label; ?></title>
+    <title><?php echo esc_html( $title_label ); ?></title>
     <style>
         html, body { height: 100%; margin: 0; }
         body { background: #f3f4f6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
@@ -343,6 +394,8 @@ final class Wooster_SharePoint_PDF_Block {
         <div id="scroller" role="document" aria-label="PDF document"></div>
     </div>
 
+    <?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
+    <?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
     <script src="<?php echo esc_url( $pdfjs_url ); ?>"></script>
     <script>
     (function () {

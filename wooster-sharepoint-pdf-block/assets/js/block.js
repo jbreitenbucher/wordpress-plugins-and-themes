@@ -31,7 +31,7 @@
     title: __("Wooster SharePoint PDF", "wspdf"),
     description: __("Embed a SharePoint PDF using an “Anyone” share link, rendered via a consistent PDF.js viewer.", "wspdf"),
     icon: "media-document",
-    category: "wpb-content", // Use existing “Wooster Blocks” category slug; do NOT create duplicates.
+    category: "wbp-content", // Wooster Blocks category slug (created in PHP if missing).
     attributes: {
       shareUrl: { type: "string", default: "" },
       filename: { type: "string", default: "" },

@@ -65,13 +65,17 @@ final class Wooster_SharePoint_PDF_Block {
         $filename = isset( $attributes['filename'] ) ? sanitize_file_name( (string) $attributes['filename'] ) : '';
         $height   = isset( $attributes['height'] ) ? max( 200, (int) $attributes['height'] ) : 900;
 
-        $viewer_url = add_query_arg(
-            [
-                'u'  => self::b64url_encode( $share_url ),
-                'fn' => $filename,
-            ],
-            rest_url( self::NS . '/viewer' )
-        );
+        $args = [
+                'u' => self::b64url_encode( $share_url ),
+            ];
+            if ( $filename !== '' ) {
+                $args['fn'] = $filename;
+            }
+
+            $viewer_url = add_query_arg(
+                $args,
+                rest_url( self::NS . '/viewer' )
+            );
 
         return sprintf(
             '<div class="wspdf-embed"><iframe class="wspdf-viewer" src="%s" style="width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe></div>',
@@ -106,6 +110,7 @@ final class Wooster_SharePoint_PDF_Block {
                 'args'                => [
                     'u'  => [ 'required' => true ],
                     'fn' => [ 'required' => false ],
+                    'dl' => [ 'required' => false ],
                 ],
             ]
         );
@@ -237,6 +242,7 @@ final class Wooster_SharePoint_PDF_Block {
         nocache_headers();
         header( 'Content-Type: application/pdf' );
         header( 'X-Content-Type-Options: nosniff' );
+        // dl=1 forces download (used by the viewer Download button)
         $dl = (string) $request->get_param( 'dl' );
         $disposition = ( $dl === '1' ) ? 'attachment' : 'inline';
         header( 'Content-Disposition: ' . $disposition . '; filename="' . $filename . '"' );
@@ -266,13 +272,18 @@ final class Wooster_SharePoint_PDF_Block {
             exit;
         }
 
-        $pdf_url = add_query_arg(
-            [
-                'u'  => self::b64url_encode( trim( $share_url ) ),
-                'fn' => sanitize_file_name( (string) $fn ),
-            ],
-            rest_url( self::NS . '/pdf' )
-        );
+        $pdf_args = [
+                'u' => self::b64url_encode( trim( $share_url ) ),
+            ];
+            $safe_fn = sanitize_file_name( (string) $fn );
+            if ( $safe_fn !== '' ) {
+                $pdf_args['fn'] = $safe_fn;
+            }
+
+            $pdf_url = add_query_arg(
+                $pdf_args,
+                rest_url( self::NS . '/pdf' )
+            );
 
         $pdfjs_url   = add_query_arg( [ 'f' => 'pdf' ], rest_url( self::NS . '/asset' ) );
         $worker_url  = add_query_arg( [ 'f' => 'worker' ], rest_url( self::NS . '/asset' ) );
@@ -291,6 +302,7 @@ final class Wooster_SharePoint_PDF_Block {
         html, body { height: 100%; margin: 0; }
         body { background: #f3f4f6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
         #app { height: 100%; display: flex; flex-direction: column; }
+
         #toolbar {
             display: flex;
             align-items: center;
@@ -314,6 +326,7 @@ final class Wooster_SharePoint_PDF_Block {
         #toolbar button:hover { background: #f3f4f6; }
         #toolbar button:focus { outline: 2px solid rgba(0,0,0,0.25); outline-offset: 2px; }
         #status { font-size: 13px; color: #111827; }
+
         #scroller { flex: 1; overflow: auto; padding: 12px; box-sizing: border-box; }
         .page { display: flex; justify-content: center; margin: 0 auto 14px auto; width: 100%; }
         canvas { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-radius: 6px; display: block; }
@@ -322,7 +335,7 @@ final class Wooster_SharePoint_PDF_Block {
 <body>
     <div id="app">
         <div id="toolbar" role="toolbar" aria-label="PDF actions">
-            <button id="btnSave" type="button">Save</button>
+            <button id="btnDownload" type="button">Download</button>
             <button id="btnPrint" type="button">Print</button>
             <div class="spacer" aria-hidden="true"></div>
             <div id="status" aria-live="polite">Loading PDF…</div>
@@ -338,7 +351,7 @@ final class Wooster_SharePoint_PDF_Block {
 
         const statusEl = document.getElementById('status');
         const scroller = document.getElementById('scroller');
-        const btnSave = document.getElementById('btnSave');
+        const btnDownload = document.getElementById('btnDownload');
         const btnPrint = document.getElementById('btnPrint');
 
         function withDl(url) {
@@ -352,6 +365,7 @@ final class Wooster_SharePoint_PDF_Block {
         }
 
         function triggerDownload(url) {
+            // Use a plain <a> click so browsers treat it as a user gesture.
             const a = document.createElement('a');
             a.href = url;
             a.target = '_blank';
@@ -361,14 +375,15 @@ final class Wooster_SharePoint_PDF_Block {
             a.remove();
         }
 
-        if (btnSave) {
-            btnSave.addEventListener('click', () => {
+        if (btnDownload) {
+            btnDownload.addEventListener('click', () => {
                 triggerDownload(withDl(pdfUrl));
             });
         }
 
         if (btnPrint) {
             btnPrint.addEventListener('click', () => {
+                // Canvas-only rendering is not “printable” by default. Print the proxied PDF itself.
                 const frame = document.createElement('iframe');
                 frame.style.position = 'fixed';
                 frame.style.right = '0';
@@ -384,6 +399,7 @@ final class Wooster_SharePoint_PDF_Block {
                         frame.contentWindow.focus();
                         frame.contentWindow.print();
                     } catch (e) {
+                        // Fallback: open PDF in a new tab so the user can print from the browser viewer.
                         window.open(pdfUrl, '_blank', 'noopener');
                     } finally {
                         setTimeout(() => frame.remove(), 2000);
@@ -414,9 +430,31 @@ final class Wooster_SharePoint_PDF_Block {
             return Math.max(320, raw);
         }
 
+        function makeViewport(page, scale, rotation) {
+            // Support both legacy signature getViewport(scale, rotation) and modern getViewport({ scale, rotation }).
+            let vp = null;
+
+            try {
+                vp = page.getViewport({ scale: scale, rotation: rotation || 0 });
+            } catch (e) {}
+
+            if (!vp || !Number.isFinite(vp.width) || vp.width <= 0 || !Number.isFinite(vp.height) || vp.height <= 0) {
+                try {
+                    vp = (rotation !== undefined) ? page.getViewport(scale, rotation) : page.getViewport(scale);
+                } catch (e) {}
+            }
+
+            // Last-resort fallback
+            if (!vp || !Number.isFinite(vp.width) || vp.width <= 0 || !Number.isFinite(vp.height) || vp.height <= 0) {
+                try { vp = page.getViewport(1); } catch (e) {}
+            }
+
+            return vp;
+        }
+
         async function computeAspectFromFirstPage() {
             const p1 = await pdfDoc.getPage(1);
-            const v1 = p1.getViewport({ scale: 1 });
+            const v1 = makeViewport(p1, 1);
             if (v1 && v1.width > 0 && v1.height > 0) {
                 pageAspect = v1.height / v1.width;
             }
@@ -466,17 +504,21 @@ final class Wooster_SharePoint_PDF_Block {
                 const page = await pdfDoc.getPage(pageNumber);
 
                 const w = innerScrollerWidth();
-                const viewport1 = page.getViewport({ scale: 1 });
-                const scale = Math.max(0.1, w / viewport1.width);
+                const viewport1 = makeViewport(page, 1);
+                const baseW = (viewport1 && Number.isFinite(viewport1.width) && viewport1.width > 0) ? viewport1.width : w;
+                const scale = Math.max(0.1, w / baseW);
 
-                const viewport = page.getViewport({ scale });
+                const viewport = makeViewport(page, scale);
+                if (!viewport || !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height) || viewport.width <= 0 || viewport.height <= 0) {
+                    throw new Error('Bad viewport');
+                }
                 const dpr = window.devicePixelRatio || 1;
 
                 rec.canvas.style.width = Math.round(viewport.width) + 'px';
                 rec.canvas.style.height = Math.round(viewport.height) + 'px';
 
-                rec.canvas.width  = Math.floor(viewport.width * dpr);
-                rec.canvas.height = Math.floor(viewport.height * dpr);
+                rec.canvas.width  = Math.max(1, Math.floor(viewport.width * dpr));
+                rec.canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
 
                 const ctx = rec.canvas.getContext('2d', { alpha: true });
                 clearCanvasWhite(ctx, rec.canvas);
@@ -579,8 +621,7 @@ final class Wooster_SharePoint_PDF_Block {
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     withCredentials: false,
-                    // Our /pdf endpoint is a WordPress REST proxy and does NOT implement HTTP Range.
-                    // Force a single full-file fetch to avoid “loads pages but renders blank”.
+                    // WordPress REST proxy does not reliably support HTTP Range/streaming.
                     disableRange: true,
                     disableStream: true,
                     disableAutoFetch: false

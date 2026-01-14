@@ -1,0 +1,107 @@
+.nfp {
+  --nfp-gap: 1rem;
+  --nfp-meta-opacity: 0.8;
+  --nfp-meta-font-size: var(--nfp-meta-font-size);
+  --nfp-meta-color: inherit;
+}
+
+.nfp--grid {
+  display: grid;
+  gap: var(--nfp-gap);
+}
+
+.nfp--grid.nfp--cols-1 { grid-template-columns: 1fr; }
+.nfp--grid.nfp--cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nfp--grid.nfp--cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nfp--grid.nfp--cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nfp--grid.nfp--cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.nfp--grid.nfp--cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+/* Masonry using CSS columns */
+.nfp--masonry {
+  column-gap: var(--nfp-gap);
+}
+.nfp--masonry.nfp--cols-1 { column-count: 1; }
+.nfp--masonry.nfp--cols-2 { column-count: 2; }
+.nfp--masonry.nfp--cols-3 { column-count: 3; }
+.nfp--masonry.nfp--cols-4 { column-count: 4; }
+.nfp--masonry.nfp--cols-5 { column-count: 5; }
+.nfp--masonry.nfp--cols-6 { column-count: 6; }
+
+.nfp__card {
+  break-inside: avoid;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255,255,255,.92);
+}
+
+.nfp__thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.nfp__body {
+  padding: 0.95rem;
+}
+
+.nfp__title {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.05em;
+  line-height: 1.25;
+}
+
+.nfp__title a {
+  text-decoration: none;
+}
+
+.nfp__title a:hover {
+  text-decoration: underline;
+}
+
+.nfp__meta {
+  font-size: var(--nfp-meta-font-size, 0.9em) !important;
+  opacity: var(--nfp-meta-opacity);
+      color: var(--nfp-meta-color, inherit) !important;
+  margin: 0.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  line-height: 1.3;
+}
+
+.nfp--meta-uppercase .nfp__meta {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+
+
+.nfp__excerpt {
+  margin: 0.5rem 0 0 0;
+}
+
+/* Basic responsive fallback */
+@media (max-width: 900px) {
+  .nfp--grid.nfp--cols-4,
+  .nfp--grid.nfp--cols-5,
+  .nfp--grid.nfp--cols-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .nfp--masonry.nfp--cols-4,
+  .nfp--masonry.nfp--cols-5,
+  .nfp--masonry.nfp--cols-6 { column-count: 3; }
+}
+
+@media (max-width: 640px) {
+  .nfp--grid { grid-template-columns: 1fr !important; }
+  .nfp--masonry { column-count: 1 !important; }
+}
+
+
+/* Masonry spacing: match grid vertical rhythm */
+.nfp--masonry .nfp__card{
+  display:inline-block;
+  width:100%;
+  margin: 0 0 var(--nfp-gap) 0;
+}

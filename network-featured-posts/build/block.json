@@ -1,0 +1,112 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "nfp/network-featured-posts",
+  "title": "Network Featured Posts",
+  "category": "wbp-content",
+  "icon": "networking",
+  "description": "Display posts from across a multisite network (fast indexed query).",
+  "textdomain": "network-featured-posts",
+  "editorScript": "file:./block.js",
+  "style": "file:./style.css",
+  "editorStyle": "file:./editor.css",
+  "supports": {
+    "align": [
+      "wide",
+      "full"
+    ],
+    "spacing": {
+      "margin": true,
+      "padding": true,
+      "blockGap": true
+    },
+    "color": {
+      "text": true,
+      "background": true
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true
+    }
+  },
+  "attributes": {
+    "postsToShow": {
+      "type": "number",
+      "default": 6
+    },
+    "showFeaturedImage": {
+      "type": "boolean",
+      "default": true
+    },
+    "imageSize": {
+      "type": "string",
+      "default": "large"
+    },
+    "layout": {
+      "type": "string",
+      "default": "grid"
+    },
+    "columns": {
+      "type": "number",
+      "default": 3
+    },
+    "categorySlugs": {
+      "type": "array",
+      "default": []
+    },
+    "excludeCategorySlugs": {
+      "type": "array",
+      "default": []
+    },
+    "includeBlogIds": {
+      "type": "array",
+      "default": []
+    },
+    "postType": {
+      "type": "string",
+      "default": "post"
+    },
+    "meta": {
+      "type": "object",
+      "default": {
+        "showAuthor": true,
+        "showDate": true,
+        "showSite": true,
+        "showCategories": false,
+        "showExcerpt": true,
+        "position": "below",
+        "separator": " \u2022 "
+      }
+    },
+    "metaStyle": {
+      "type": "object",
+      "default": {
+        "opacity": 0.8,
+        "uppercase": false,
+        "fontSize": 14,
+        "textColor": ""
+      }
+    },
+    "metaOrder": {
+      "type": "array",
+      "default": [
+        "site",
+        "author",
+        "date",
+        "categories"
+      ]
+    },
+    "dateRange": {
+      "type": "string",
+      "default": "all"
+    },
+    "orderBy": {
+      "type": "string",
+      "default": "date"
+    },
+    "sortOrder": {
+      "type": "string",
+      "default": "desc"
+    }
+  }
+}

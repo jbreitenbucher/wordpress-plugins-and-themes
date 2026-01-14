@@ -3,8 +3,10 @@
  * Plugin Name:       Wooster SharePoint PDF Block
  * Description:       Gutenberg block to embed SharePoint PDFs via “Anyone” share links using a self-hosted PDF.js viewer (no Media Library uploads, no raw-PDF iframe).
  * Version:           1.0.0
- * Author:            The College of Wooster
+ * Author:            Wooster
  * License:           GPL-2.0-or-later
+ * Text Domain:       wooster-sharepoint-pdf-block
+ * Domain Path:       /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -44,7 +46,7 @@ final class Wooster_SharePoint_PDF_Block {
 
         $categories[] = [
             'slug'  => $slug,
-            'title' => __( 'Wooster Blocks', 'wspdf' ),
+            'title' => __( 'Wooster Blocks', 'wooster-sharepoint-pdf-block' ),
             'icon'  => null,
         ];
 
@@ -82,24 +84,57 @@ final class Wooster_SharePoint_PDF_Block {
             ]
         );
 
+        // Prefer block.json metadata (build/block.json) so editor + PHP stay in sync.
+        // We still pass the render callback here because this is a dynamic block.
         register_block_type(
-            'wspdf/wooster-sharepoint-pdf',
+            __DIR__ . '/build',
             [
-                'editor_script'   => $handle,
                 'render_callback' => [ __CLASS__, 'render_block' ],
-                'attributes'      => [
-                    'shareUrl' => [ 'type' => 'string', 'default' => '' ],
-                    'filename' => [ 'type' => 'string', 'default' => '' ],
-                    'height'   => [ 'type' => 'number', 'default' => 900 ],
-                ],
-                'supports'        => [
-                    'align' => [ 'wide', 'full' ],
-                ],
             ]
         );
     }
 
-    public static function render_block( array $attributes ) : string {
+    /**
+     * Server-side render callback.
+     *
+     * Important: use get_block_wrapper_attributes() so core can apply alignment
+     * classes (alignwide/alignfull) and any theme styles that depend on them.
+     *
+     * @param array         $attributes Block attributes.
+     * @param string        $content    Block content.
+     * @param WP_Block|null $block      Block instance.
+     * @return string
+     */
+    
+	/**
+	 * Append one or more CSS classes to a wrapper-attribute string produced by get_block_wrapper_attributes().
+	 *
+	 * We intentionally call get_block_wrapper_attributes() *without* overriding the "class" attribute so
+	 * WordPress can inject alignment classes (alignwide/alignfull) and any other block-support classes.
+	 *
+	 * @param string $wrapper_attributes Attribute string, e.g. 'class="..." data-...'
+	 * @param string $classes_to_add     Space-separated classes to append.
+	 * @return string Updated attribute string.
+	 */
+	private static function append_classes_to_wrapper_attributes( $wrapper_attributes, $classes_to_add ) {
+		$classes_to_add = trim( (string) $classes_to_add );
+		if ( '' === $classes_to_add ) {
+			return (string) $wrapper_attributes;
+		}
+
+		$wrapper_attributes = (string) $wrapper_attributes;
+
+		if ( preg_match( '/\bclass="([^"]*)"/', $wrapper_attributes, $m ) ) {
+			$existing = trim( $m[1] );
+			$combined = trim( $existing . ' ' . $classes_to_add );
+			return preg_replace( '/\bclass="[^"]*"/', 'class="' . esc_attr( $combined ) . '"', $wrapper_attributes, 1 );
+		}
+
+		// No class attribute present yet; just append one.
+		return trim( $wrapper_attributes ) . ' class="' . esc_attr( $classes_to_add ) . '"';
+	}
+
+public static function render_block( array $attributes, string $content = '', $block = null ) : string {
         $share_url = isset( $attributes['shareUrl'] ) ? trim( (string) $attributes['shareUrl'] ) : '';
         if ( $share_url === '' ) {
             return '';
@@ -120,8 +155,13 @@ final class Wooster_SharePoint_PDF_Block {
                 rest_url( self::NS . '/viewer' )
             );
 
+        $wrapper_attrs = function_exists( 'get_block_wrapper_attributes' )
+            ? get_block_wrapper_attributes( [ 'class' => 'wspdf-embed' ] )
+            : 'class="wspdf-embed"';
+
         return sprintf(
-            '<div class="wspdf-embed"><iframe class="wspdf-viewer" src="%s" style="width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe></div>',
+            '<div %s><iframe class="wspdf-viewer" src="%s" style="display:block;width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe></div>',
+            $wrapper_attrs,
             esc_url( $viewer_url ),
             (int) $height
         );
@@ -395,8 +435,8 @@ final class Wooster_SharePoint_PDF_Block {
     </div>
 
     <?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
-    <?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
-    <script src="<?php echo esc_url( $pdfjs_url ); ?>"></script>
+	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
+	<script src="<?php echo esc_url( $pdfjs_url ); ?>"></script>
     <script>
     (function () {
         const pdfUrl = <?php echo wp_json_encode( $pdf_url ); ?>;

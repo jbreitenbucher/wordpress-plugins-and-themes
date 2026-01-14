@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "wspdf/wooster-sharepoint-pdf",
+  "title": "SharePoint PDF",
+  "category": "wpb-content",
+  "icon": "media-document",
+  "description": "Embed a PDF from a SharePoint sharing link using a self-hosted PDF.js viewer.",
+  "textdomain": "wooster-sharepoint-pdf-block",
+  "keywords": ["pdf", "sharepoint", "embed"],
+  "editorScript": "wspdf-block-editor",
+  "attributes": {
+    "shareUrl": {
+      "type": "string",
+      "default": ""
+    },
+    "filename": {
+      "type": "string",
+      "default": ""
+    },
+    "height": {
+      "type": "number",
+      "default": 900
+    }
+  },
+  "supports": {
+    "align": ["wide", "full"],
+    "html": false,
+    "anchor": true
+  }
+}

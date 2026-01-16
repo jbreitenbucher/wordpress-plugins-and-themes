@@ -1,7 +1,8 @@
 <?php
 /**
  * Plugin Name:       Wooster SharePoint PDF Block
- * Description:       Gutenberg block to embed SharePoint PDFs via “Anyone” share links using a self-hosted PDF.js viewer (no Media Library uploads, no raw-PDF iframe).
+ * Description:       Gutenberg block to embed SharePoint PDFs via “Anyone” share links using a self-hosted
+ *                    PDF.js viewer (no Media Library uploads, no raw-PDF iframe).
  * Version:           1.0.0
  * Author:            The College of Wooster
  * Requires at least: 6.2

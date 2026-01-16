@@ -1,14 +1,14 @@
 <?php
 /**
  * Plugin Name:       Wooster Block Patterns
- * Description:       Curated block patterns and custom blocks for College of Wooster department and office sites.
+ * Description:       Curated block patterns and custom blocks for College of Wooster department and office
+ *                    sites.
  * Version:           1.4.1
- * Author:            College of Wooster (Jon Breitenbucher)
- * License:           GPL-2.0-or-later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       wooster-block-patterns
+ * Author:            The College of Wooster
  * Requires at least: 6.5
  * Requires PHP:      7.4
+ * License:           GPL-2.0-or-later
+ * Text Domain:       wooster-block-patterns
  */
 
 defined( 'ABSPATH' ) || exit;

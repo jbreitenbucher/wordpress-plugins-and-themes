@@ -8,7 +8,7 @@ Stable tag: 1.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Generate an auto-updating list of public sites in a WordPress multisite network via a shortcode.
+Generate an auto-updating table of public sites with editors in a WordPress multisite network via a shortcode.
 
 == Description ==
 

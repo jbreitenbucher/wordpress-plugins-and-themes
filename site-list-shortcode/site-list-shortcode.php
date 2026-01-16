@@ -3,18 +3,49 @@
  * Plugin Name:       Site List
  * Description:       Adds a shortcode that can be used to generate and display a table of all sites with
  *                    associated editors in a multisite network.
- * Version:           1.1.2
+ * Version:           1.1.5
  * Author:            The College of Wooster
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Network:           true
  * License:           GPLv2 or later
- * Text Domain:       site-list
+ * Text Domain:       site-list-shortcode
+ * Domain Path:       /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+/**
+ * Load plugin translations.
+ *
+ * Plugin Check discourages load_plugin_textdomain() for plugins hosted on
+ * WordPress.org (Core auto-loads translations). Using load_textdomain() keeps
+ * us compatible with both wp.org and non-wp.org deployment.
+ *
+ * @return void
+ */
+function cow_site_list_load_textdomain() {
+	$domain = 'site-list-shortcode';
+
+	// Try the standard WP.org languages directory first.
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+	// Allow deployments to override locale selection for this plugin's MO file lookup.
+	$locale = (string) apply_filters( 'cow_site_list_locale', $locale, $domain );
+
+	$mo_wporg = trailingslashit( WP_LANG_DIR ) . 'plugins/' . $domain . '-' . $locale . '.mo';
+	if ( file_exists( $mo_wporg ) ) {
+		load_textdomain( $domain, $mo_wporg );
+	}
+
+	// Fall back to the plugin's bundled languages directory.
+	$mo_local = plugin_dir_path( __FILE__ ) . 'languages/' . $domain . '-' . $locale . '.mo';
+	if ( file_exists( $mo_local ) ) {
+		load_textdomain( $domain, $mo_local );
+	}
+}
+add_action( 'plugins_loaded', 'cow_site_list_load_textdomain' );
 
 /**
  * Shortcode handler for [site-list].
@@ -183,8 +214,8 @@ function cow_site_list_shortcode( $atts ) {
 	$output = sprintf(
 		'<table class="%s"><thead><tr><th scope="col">%s</th><th scope="col">%s</th></tr></thead><tbody>%s</tbody></table>',
 		esc_attr( $table_css ),
-		esc_html__( 'Site', 'site-list' ),
-		esc_html__( 'Editors', 'site-list' ),
+		esc_html__( 'Site', 'site-list-shortcode' ),
+		esc_html__( 'Editors', 'site-list-shortcode' ),
 		$body
 	);
 

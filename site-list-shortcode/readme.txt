@@ -4,7 +4,7 @@ Tags: multisite, network, shortcode
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,15 @@ Yes. Results are cached using the object cache for 10 minutes by default. You ca
 Example: [site-list cache="120"]
 
 == Changelog ==
+
+= 1.1.5 =
+* Replace non-prefixed core filter invocation (plugin_locale) with plugin-prefixed filter cow_site_list_locale to satisfy naming conventions.
+
+= 1.1.4 =
+* Fix Plugin Check issues: replace discouraged load_plugin_textdomain() usage with load_textdomain() and correct languages/index.php direct-access protection.
+
+= 1.1.3 =
+* Fix translation text domain and load translations from /languages.
 
 = 1.1.2 =
 * Add shortcode attribute `exclude` to omit specific sites by blog ID (e.g., exclude="3,5").

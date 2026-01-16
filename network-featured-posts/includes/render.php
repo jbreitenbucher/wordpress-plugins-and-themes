@@ -201,13 +201,38 @@ function nfp_get_allowed_blog_ids_effective( $include_blog_ids ) {
  */
 function nfp_index_has_rows_for_blog( $blog_id ) {
     global $wpdb;
-    $table = nfp_get_index_table_name();
     $blog_id = absint( $blog_id );
     if ( $blog_id <= 0 ) {
         return false;
     }
-    $count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(1) FROM {$table} WHERE blog_id = %d", $blog_id ) );
-    return $count > 0;
+
+    $cache_group = 'nfp';
+    $ttl         = (int) get_site_option( 'nfp_cache_ttl', 300 );
+    $ttl         = max( 30, $ttl );
+    $ver         = (int) get_site_option( 'nfp_cache_version', 1 );
+    $cache_key   = 'nfp_has_rows_' . $blog_id . '_v' . $ver;
+
+    $cached = wp_cache_get( $cache_key, $cache_group );
+    if ( false !== $cached ) {
+        return (bool) $cached;
+    }
+
+
+    $table = nfp_get_index_table_name(); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Deterministic table name validated below.
+    // Table name is deterministic: {$wpdb->base_prefix}network_featured_posts_index.
+    // Extra hardening: ensure the generated name contains only expected characters.
+    if ( ! preg_match( '/^[A-Za-z0-9_]+$/', $table ) ) {
+        return false;
+    }
+
+	$count = (int) $wpdb->get_var(
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name is deterministic and validated above.
+		$wpdb->prepare( 'SELECT COUNT(1) FROM ' . $table . ' WHERE blog_id = %d', $blog_id )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+
+    $has_rows = ( $count > 0 );
+    wp_cache_set( $cache_key, $has_rows, $cache_group, $ttl );
+    return $has_rows;
 }
 
 /**
@@ -258,20 +283,33 @@ function nfp_seed_index_for_blog( $blog_id, $limit = 200 ) {
 
 function nfp_query_index( $args ) {
     global $wpdb;
-    $table = nfp_get_index_table_name();
+	$table = nfp_get_index_table_name(); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+	// Extra hardening: ensure the generated table name contains only expected characters.
+	if ( ! preg_match( '/^[A-Za-z0-9_]+$/', $table ) ) {
+		return array();
+	}
 
     $posts_to_show = max( 1, absint( $args['posts_to_show'] ?? 6 ) );
+    // Defensive sanitization (even though callers already sanitize).
     $blog_ids      = $args['blog_ids'] ?? array();
+    $blog_ids      = is_array( $blog_ids ) ? array_values( array_filter( array_map( 'absint', $blog_ids ) ) ) : array();
     $cat_slugs     = $args['cat_slugs'] ?? array();
+    $cat_slugs     = is_array( $cat_slugs ) ? array_values( array_filter( array_map( 'sanitize_title', $cat_slugs ) ) ) : array();
     $exclude_slugs = $args['exclude_slugs'] ?? array();
+    $exclude_slugs = is_array( $exclude_slugs ) ? array_values( array_filter( array_map( 'sanitize_title', $exclude_slugs ) ) ) : array();
     $post_type     = sanitize_key( $args['post_type'] ?? 'post' );
 
     $cutoff_gmt = absint( $args['cutoff_gmt'] ?? 0 );
-    $order_by   = sanitize_key( $args['order_by'] ?? 'date' );
-    $order      = sanitize_key( $args['order'] ?? 'desc' );
-    $order      = in_array( $order, array( 'asc', 'desc' ), true ) ? strtoupper( $order ) : 'DESC';
-    $order_by   = ( 'title' === $order_by ) ? 'title' : 'date';
-    $order_by_sql = ( 'title' === $order_by ) ? 'post_title' : 'post_date_gmt';
+    $order_by = sanitize_key( $args['order_by'] ?? 'date' );
+    $order    = sanitize_key( $args['order'] ?? 'desc' );
+
+    $order_by_map = array(
+        'title' => 'post_title',
+        'date'  => 'post_date_gmt',
+    );
+    $order_by_sql = isset( $order_by_map[ $order_by ] ) ? $order_by_map[ $order_by ] : $order_by_map['date'];
+
+    $order = ( 'asc' === $order ) ? 'ASC' : 'DESC';
 
     if ( empty( $blog_ids ) ) {
         return array();
@@ -293,37 +331,55 @@ function nfp_query_index( $args ) {
     $where[]      = "blog_id IN ($placeholders)";
     $params       = array_merge( $params, $blog_ids );
 
-    // Include categories: match ANY slug.
-    if ( ! empty( $cat_slugs ) ) {
-        $likes = array();
-        foreach ( $cat_slugs as $slug ) {
-            $likes[]  = "cat_slugs LIKE %s";
-            $params[] = '%' . $wpdb->esc_like( '|' . $slug . '|' ) . '%';
-        }
-        $where[] = '(' . implode( ' OR ', $likes ) . ')';
-    }
+	// Include categories: match ANY slug.
+	// We normalize stored cat slugs to a comma-delimited token list on the fly so we can
+	// match both legacy comma-separated storage and current pipe-wrapped storage.
+	if ( ! empty( $cat_slugs ) ) {
+		$likes = array();
+		foreach ( $cat_slugs as $slug ) {
+			$likes[]  = "CONCAT(',', REPLACE(cat_slugs, '|', ','), ',') LIKE %s";
+			$params[] = '%,' . $wpdb->esc_like( $slug ) . ',%';
+		}
+		$where[] = '(' . implode( ' OR ', $likes ) . ')';
+	}
 
-    // Exclude categories: match NONE.
-    if ( ! empty( $exclude_slugs ) ) {
-        foreach ( $exclude_slugs as $slug ) {
-            $where[]  = "cat_slugs NOT LIKE %s";
-            $params[] = '%' . $wpdb->esc_like( '|' . $slug . '|' ) . '%';
-        }
-    }
+	// Exclude categories: match NONE.
+	if ( ! empty( $exclude_slugs ) ) {
+		foreach ( $exclude_slugs as $slug ) {
+			$where[]  = "CONCAT(',', REPLACE(cat_slugs, '|', ','), ',') NOT LIKE %s";
+			$params[] = '%,' . $wpdb->esc_like( $slug ) . ',%';
+		}
+	}
 
-    $sql = "
-        SELECT blog_id, post_id, post_date_gmt, post_title, permalink, site_name, author_name, excerpt,
-               cat_names, img_thumbnail, img_medium, img_large, img_full
-        FROM {$table}
-        WHERE " . implode( ' AND ', $where ) . "
-        ORDER BY {$order_by_sql} {$order}
-        LIMIT %d
-    ";
+	$cache_group = 'nfp';
+	$ttl         = (int) get_site_option( 'nfp_cache_ttl', 300 );
+	$ttl         = max( 30, $ttl );
+	$ver         = (int) get_site_option( 'nfp_cache_version', 1 );
+	$cache_key   = 'nfp_query_' . md5( wp_json_encode( array(
+		'posts_to_show' => $posts_to_show,
+		'blog_ids'      => $blog_ids,
+		'cat_slugs'     => $cat_slugs,
+		'exclude_slugs' => $exclude_slugs,
+		'post_type'     => $post_type,
+		'cutoff_gmt'    => $cutoff_gmt,
+		'order_by'      => $order_by_sql,
+		'order'         => $order,
+	) ) ) . '_v' . $ver;
 
-    $params[] = $posts_to_show;
+	$cached = wp_cache_get( $cache_key, $cache_group );
+	if ( false !== $cached ) {
+		return $cached;
+	}
 
-    $prepared = $wpdb->prepare( $sql, $params );
-    return $wpdb->get_results( $prepared, ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	$params[] = $posts_to_show;
+
+	$sql = "\n\t\tSELECT blog_id, post_id, post_date_gmt, post_title, permalink, site_name, author_name, excerpt,\n\t\t       cat_names, img_thumbnail, img_medium, img_large, img_full\n\t\tFROM {$table}\n\t\tWHERE " . implode( ' AND ', $where ) . "\n\t\tORDER BY {$order_by_sql} {$order}\n\t\tLIMIT %d\n\t\t";
+
+		$prepared = $wpdb->prepare( $sql, $params ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$results  = $wpdb->get_results( $prepared, ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared
+
+	wp_cache_set( $cache_key, $results, $cache_group, $ttl );
+	return $results;
 }
 
 /**

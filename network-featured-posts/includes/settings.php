@@ -30,10 +30,11 @@ function nfp_render_network_settings_page() {
     }
 
     if ( isset( $_POST['nfp_settings_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nfp_settings_nonce'] ) ), 'nfp_save_settings' ) ) {
-        $ttl = isset( $_POST['nfp_cache_ttl'] ) ? absint( $_POST['nfp_cache_ttl'] ) : 300;
+        $ttl = isset( $_POST['nfp_cache_ttl'] ) ? absint( wp_unslash( $_POST['nfp_cache_ttl'] ) ) : 300;
         update_site_option( 'nfp_cache_ttl', max( 30, $ttl ) );
 
-        $allowed = isset( $_POST['nfp_allowed_blog_ids'] ) ? (array) $_POST['nfp_allowed_blog_ids'] : array();
+	    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- IDs are sanitized via absint() below.
+	    $allowed = isset( $_POST['nfp_allowed_blog_ids'] ) ? (array) wp_unslash( $_POST['nfp_allowed_blog_ids'] ) : array();
         $allowed = array_map( 'absint', $allowed );
         $allowed = array_values( array_filter( array_unique( $allowed ) ) );
         update_site_option( 'nfp_allowed_blog_ids', $allowed );

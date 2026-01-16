@@ -223,14 +223,15 @@ function nfp_remove_post_from_index( $post_id, $post = null ) {
     $table  = nfp_get_index_table_name();
     $blog_id = get_current_blog_id();
 
-    $wpdb->delete(
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed table maintenance; cache is bumped below.
+	$wpdb->delete(
         $table,
         array(
             'blog_id' => (int) $blog_id,
             'post_id' => (int) $post_id,
         ),
         array( '%d', '%d' )
-    ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	);
 
     nfp_bump_cache_version();
 }

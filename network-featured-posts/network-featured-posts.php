@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Network Featured Posts Block
  * Description:       Display posts from across a WordPress Multisite network (indexed + cached).
- * Version:           1.0.0
+ * Version:           1.0.5
  * Author:            The College of Wooster
  * Requires at least: 6.2
  * Requires PHP:      7.4
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'NFP_VERSION', '1.0.0' );
+define( 'NFP_VERSION', '1.0.5' );
 define( 'NFP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NFP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

@@ -1,5 +1,5 @@
 === Wooster Block Patterns ===
-Contributors: woosterit
+Contributors: wooster
 Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 7.4

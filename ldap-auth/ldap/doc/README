@@ -1,0 +1,140 @@
+================================================================================
+Project Website: http://wpmuldap.tuxdocs.net
+================================================================================
+================================================================================
+License:
+================================================================================
+
+LDAP-Authentication Plugin, v.3.1.1
+for WPMU 3.1.x
+
+Copyright (C) 2010 Alistair Young, Patrick Cavit, Hugo Salgado, Alex Barker, and 
+Sean Wedig, Aaron Axelsen
+
+This library is free software; you can redistribute it and/or modify it under 
+the terms of the GNU Lesser General Public License as published by the Free 
+Software Foundation; either version 2.1 of the License, or (at your option) any 
+later version. 
+
+This library is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License along 
+with this library; if not, write to the Free Software Foundation, Inc., 
+59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+
+================================================================================
+Description:
+================================================================================
+
+A plugin to override the core Wordpress MU authentication method so as to use an 
+LDAP server for authentication.  
+
+Once installed (see below for instructions), the system may be configured to 
+automatically create local WordPress MU user accounts and blogs.  Both the 
+automatic creation of users and the automatic creation of blogs are configurable
+options.  
+
+LDAP authentication is configured on a site-wide (as opposed to per-blog) level, 
+so only Site Admin accounts have access to the configuration to LDAP connection 
+information.    
+
+Please make sure you have PHP compiled with LDAP support.  This will show up as 
+an LDAP section in your phpinfo() if it is correct.
+
+This plug-in has many authors (see Credits below).  If you make a modification 
+to this plug-in, please consider submitting your changes as a patch to our 
+SourceForge page: http://sourceforge.net/projects/wpmu-ldap.  
+
+Remember - all the code for the plugin was contributed by volunteers, and you 
+can show your gratitude by giving back to the community!
+
+
+================================================================================
+Installtion:
+================================================================================
+
+Extract to your <wordpressmu_root/wp-content/mu-plugins> folder.  Thats it!
+
+It is recommended to also change the welcome message that is sent to users upon
+account creation.  By default, WPMU includes the user's password in the message,
+even though this password is *not* used by this plugin.  The password sent is
+purely the password attached to the WPMU account that ties to the user's LDAP 
+login.  To change the welcome message, log in as a Site Admin and go to Site
+Admin -> Options, and edit "Welcome Email" appropriately.
+
+
+================================================================================
+Configuration:
+================================================================================
+
+Configuration of this plugin is on a site-wide level.  To modify its settings, 
+you will need to be logged in to WPMU as a Site-Admin account and go to 
+Site Admin -> LDAP Options
+
+From here, you can configure the LDAP connection information, whether to 
+automatically create "local" (read "WordPress MU") user accounts and blogs, 
+whether the plugin is active or not, if the public signup form is enabled, and 
+message to display if it is not.
+
+For more information on each of the options available, install the plugin and 
+check the LDAP Options panel; each option has hidden text containing helpful 
+information and tips regarding the form inputs.
+
+
+================================================================================
+Details:
+================================================================================
+
+=== Creating Users / Blogs: ===
+When enabled, this plugin can automatically create WordPress MU user accounts 
+and blogs for LDAP-authenticated users.  Assuming user credentials authenticate
+against the LDAP server, creating local accounts and blogs follows this 
+algorithm:
+
+Create a new WPMU User, with LDAP username and a randomly generated password.
+Some user information, such as first and last name, is extracted from the 
+  information returned from the LDAP server.
+Actions for user creation and activation are triggered.
+The user's domain / URL are created depending on plugin configuration (i.e., 
+  VHost vs SubDir).
+If the option is set, a blog is created, with path and name based on the LDAP 
+  username and the blog is activated with the user being Administrator, and 
+  appropriate actions are triggered.
+
+It should be noted that even though a random password is created for a user (for 
+WPMU accounts), it is never displayed to the user.  This is intentional so that 
+there is no confusion as to which password should be used; it will always be 
+using LDAP credentials.  As a result, though, if ever LDAP is disabled or if
+the server is unavailable, users created with LDAP authentication will be 
+unable to log in unless their passwords are reset.
+
+
+================================================================================
+Credits:
+================================================================================
+
+Alistair Young - Original LDAP Plug-in
+http://www.weblogs.uhi.ac.uk/sm00ay/?p=45
+
+Patrick Cavit - WordPress 1.5.1 Modifcation of LDAP Plug-in
+http://patcavit.com/2005/05/11/wordpress-ldap-and-playing-nicely/
+
+Hugo Salgado - WordPress 2.0.3 Patch of WordPress 1.5.1 Modifcation of LDAP Plug-in
+http://hugo.vulcano.cl/development/wordpress/ldap-auth-patch/
+
+Alex Barker - WordPress MU 1.0.* Modifcation of LDAP Plug-in
+http://wpmudev.org/project/WPMU-LDAP-Authentication-Plug-in
+
+Dexter Arver - Windows LDAP Support Contribution for WordPress MU 1.0.* LDAP Plug-in
+
+Sean Wedig - 
+http://www.thecodelife.net/category/software-dev/technology/wpmu/wpmu-ldap/
+
+Aaron Axelsen - http://www.frozenpc.net
+
+================================================================================
+Project Website: http://wpmuldap.tuxdocs.net
+================================================================================

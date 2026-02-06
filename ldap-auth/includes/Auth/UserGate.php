@@ -34,7 +34,7 @@ final class UserGate
             return $user;
         }
         if (UserIdentity::is_ldap_managed((int) $user->ID)) {
-            return new WP_Error('ldap_local_login_blocked', __('<strong>ERROR</strong>: Local password login is disabled for LDAP-managed accounts.'));
+            return new WP_Error('ldap_local_login_blocked', __('<strong>ERROR</strong>: Local password login is disabled for LDAP-managed accounts.', 'ldap-auth'));
         }
         return $user;
     }

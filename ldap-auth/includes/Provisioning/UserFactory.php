@@ -23,7 +23,10 @@ final class UserFactory
         $email = (string) ($dirUser['mail'] ?? '');
 
         if ($username === '') {
-            return new WP_Error('ldap_username_empty', __('<strong>ERROR</strong>: Missing username from directory record.'));
+            return new WP_Error(
+                'ldap_username_empty',
+                __('<strong>ERROR</strong>: Missing username from directory record.', 'ldap-auth')
+            );
         }
 
         $existing = get_user_by('login', $username);
@@ -32,14 +35,32 @@ final class UserFactory
         }
 
         if (!Options::get_bool('ldapCreateAcct')) {
-            return new WP_Error('ldap_create_disabled', __('<strong>ERROR</strong>: Account creation is disabled.'));
+            return new WP_Error(
+                'ldap_create_disabled',
+                __('<strong>ERROR</strong>: Account creation is disabled.', 'ldap-auth')
+            );
         }
 
         if ($email === '') {
-            return new WP_Error('ldapcreate_emailempty', sprintf(__('<strong>ERROR</strong>: <strong>%s</strong> does not have an email address associated with the directory record. All WordPress accounts must have a unique email address.'), esc_html($username)));
+            return new WP_Error(
+                'ldapcreate_emailempty',
+                sprintf(
+                    // translators: %s: Username (login) coming from the directory.
+                    __('<strong>ERROR</strong>: <strong>%s</strong> does not have an email address associated with the directory record. All WordPress accounts must have a unique email address.', 'ldap-auth'),
+                    esc_html($username)
+                )
+            );
         }
         if (email_exists($email)) {
-            return new WP_Error('ldapcreate_emailconflict', sprintf(__('<strong>ERROR</strong>: <strong>%s</strong> (%s) is already associated with another account. All accounts (including the admin account) must have a unique email address.'), esc_html($email), esc_html($username)));
+            return new WP_Error(
+                'ldapcreate_emailconflict',
+                sprintf(
+                    // translators: 1: Email address. 2: Username (login) coming from the directory.
+                    __('<strong>ERROR</strong>: <strong>%1$s</strong> (%2$s) is already associated with another account. All accounts (including the admin account) must have a unique email address.', 'ldap-auth'),
+                    esc_html($email),
+                    esc_html($username)
+                )
+            );
         }
 
         $password = wp_generate_password(24, true, true);
@@ -48,7 +69,9 @@ final class UserFactory
             : wp_create_user($username, $password, $email);
 
         if (!$userId || is_wp_error($userId)) {
-            return is_wp_error($userId) ? $userId : new WP_Error('ldapcreate_failed', __('<strong>ERROR</strong>: Account creation from LDAP failed.'));
+            return is_wp_error($userId)
+                ? $userId
+                : new WP_Error('ldapcreate_failed', __('<strong>ERROR</strong>: Account creation from LDAP failed.', 'ldap-auth'));
         }
 
         UserIdentity::set_ldap_managed((int) $userId, true);

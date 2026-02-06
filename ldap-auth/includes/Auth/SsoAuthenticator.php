@@ -59,7 +59,7 @@ final class SsoAuthenticator
         $groupResult = $this->groups->check_login($dn);
         if (!$groupResult['allowed']) {
             Logger::debug('SSO denied by groups', ['username' => $ssoUser, 'reason' => $groupResult['reason']]);
-            return new WP_Error('ldap_access_denied', __('<strong>ERROR</strong>: LDAP Access Denied.'));
+            return new WP_Error('ldap_access_denied', __('<strong>ERROR</strong>: LDAP Access Denied.', 'ldap-auth'));
         }
 
         $wpUser = $this->users->ensure_user($dirUser);
@@ -87,16 +87,21 @@ final class SsoAuthenticator
             'AUTH_USER',
         ];
         foreach ($candidates as $k) {
-            if (!empty($_SERVER[$k]) && is_string($_SERVER[$k])) {
-                $u = trim((string) $_SERVER[$k]);
-                if ($u !== '') {
-                    // Strip DOMAIN\user.
-                    if (strpos($u, '\\') !== false) {
-                        $u = substr($u, strrpos($u, '\\') + 1);
-                    }
-                    return sanitize_user($u, true);
-                }
+            if (!isset($_SERVER[$k])) {
+                continue;
             }
+            // Server vars aren't traditional user input, but they are untrusted strings; sanitize before use.
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized immediately below.
+            $raw = sanitize_text_field( wp_unslash( (string) $_SERVER[$k] ) );
+            $u = trim($raw);
+            if ($u === '') {
+                continue;
+            }
+            // Strip DOMAIN\user.
+            if (strpos($u, '\\') !== false) {
+                $u = substr($u, strrpos($u, '\\') + 1);
+            }
+            return sanitize_user($u, true);
         }
         return '';
     }

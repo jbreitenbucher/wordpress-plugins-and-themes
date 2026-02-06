@@ -42,17 +42,18 @@ final class BulkAddUserPage
     public function render(): void
     {
         if (!$this->can_access()) {
-            wp_die(__('You do not have permission to access this page.', 'ldap-auth'));
+            wp_die(esc_html__('You do not have permission to access this page.', 'ldap-auth'));
         }
 
         $notice = '';
         $results = [];
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_key(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+        if ('post' === $method) {
             check_admin_referer('ldap_auth_bulk_add_users');
 
             $role = isset($_POST['role']) ? sanitize_key(wp_unslash($_POST['role'])) : 'subscriber';
-            $raw = isset($_POST['usernames']) ? (string) wp_unslash($_POST['usernames']) : '';
+            $raw = isset($_POST['usernames']) ? sanitize_textarea_field(wp_unslash($_POST['usernames'])) : '';
             $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
             $usernames = [];
             foreach ($lines as $l) {

@@ -23,6 +23,7 @@ final class Logger
             return;
         }
         $safe = self::redact($context);
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Only logs when WP_DEBUG_LOG and ldapDebug are enabled.
         error_log(self::PREFIX . ' ' . $message . (empty($safe) ? '' : ' ' . wp_json_encode($safe)));
     }
 

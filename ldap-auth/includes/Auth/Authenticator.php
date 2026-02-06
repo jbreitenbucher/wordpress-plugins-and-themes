@@ -62,7 +62,7 @@ final class Authenticator
         $groupResult = $this->groups->check_login($dn);
         if (!$groupResult['allowed']) {
             Logger::debug('LDAP auth denied by groups', ['username' => $username, 'reason' => $groupResult['reason']]);
-            return new WP_Error('ldap_access_denied', __('<strong>ERROR</strong>: LDAP Access Denied.'));
+            return new WP_Error('ldap_access_denied', __('<strong>ERROR</strong>: LDAP Access Denied.', 'ldap-auth'));
         }
 
         $wpUser = $this->users->ensure_user($dirUser);

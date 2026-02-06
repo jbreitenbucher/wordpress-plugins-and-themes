@@ -36,13 +36,14 @@ final class AddUserPage
     {
         $cap = is_multisite() ? 'manage_network_users' : 'promote_users';
         if (!current_user_can($cap)) {
-            wp_die(__('You do not have permission to access this page.', 'ldap-auth'));
+            wp_die(esc_html__('You do not have permission to access this page.', 'ldap-auth'));
         }
 
         $notice = '';
         $error = '';
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_key(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+        if ('post' === $method) {
             check_admin_referer('ldap_auth_add_user');
             $username = isset($_POST['ldap_username']) ? sanitize_user(wp_unslash($_POST['ldap_username']), true) : '';
             $role = isset($_POST['role']) ? sanitize_key(wp_unslash($_POST['role'])) : 'subscriber';
@@ -141,7 +142,7 @@ final class AddUserPage
             echo '</td></tr>';
         }
         echo '</table>';
-        submit_button(__('Lookup and add', 'ldap-auth'));
+        submit_button(esc_html__('Lookup and add', 'ldap-auth'));
         echo '</form>';
         echo '</div>';
     }

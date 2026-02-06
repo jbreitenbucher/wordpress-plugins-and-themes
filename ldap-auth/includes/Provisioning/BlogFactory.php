@@ -43,6 +43,7 @@ final class BlogFactory
             return;
         }
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WP hook.
         $meta = apply_filters('signup_create_blog_meta', ['lang_id' => 'en', 'public' => 0]);
         $title = $username . "'s blog";
         $blogId = wpmu_create_blog($domain, $path, $title, (int) $user->ID, $meta, (int) $network->id);
@@ -50,6 +51,7 @@ final class BlogFactory
             return;
         }
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WP hook.
         do_action('wpmu_activate_blog', $blogId, $user->ID, '', $title, $meta);
     }
 }

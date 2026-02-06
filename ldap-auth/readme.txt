@@ -1,10 +1,10 @@
 === LDAP Authentication Plug-in ===
 Contributors: wooster
 Tags: ldap, authentication, sso, multisite
-Requires at least: 6.9
+Requires at least: 6.8
 Tested up to: 6.9
 Requires PHP: 8.3
-Stable tag: 4.0.0
+Stable tag: 4.0.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 

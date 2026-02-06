@@ -47,7 +47,10 @@ final class UiToggles
         }
         if (UserIdentity::is_ldap_managed($userId)) {
             $msg = Options::get_string('ldapGetPasswordMessage', __('Password resets are managed by your institution.', 'ldap-auth'));
-            return new WP_Error('no_password_reset', __('<strong>ERROR</strong>: ') . $msg);
+            return new WP_Error(
+                'no_password_reset',
+                __('<strong>ERROR</strong>: ', 'ldap-auth') . wp_kses_post($msg)
+            );
         }
         return $allow;
     }

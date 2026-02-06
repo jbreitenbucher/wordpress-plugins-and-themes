@@ -54,13 +54,14 @@ final class NetworkSettingsPage
     {
         $cap = is_multisite() ? 'manage_network_options' : 'manage_options';
         if (!current_user_can($cap)) {
-            wp_die(__('You do not have permission to access this page.', 'ldap-auth'));
+            wp_die(esc_html__('You do not have permission to access this page.', 'ldap-auth'));
         }
 
         $notice = '';
         $testOutput = '';
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_key(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+        if ('post' === $method) {
             check_admin_referer('ldap_auth_settings');
 
             $action = isset($_POST['ldap_auth_action']) ? sanitize_key(wp_unslash($_POST['ldap_auth_action'])) : 'save';
@@ -214,8 +215,8 @@ final class NetworkSettingsPage
      */
     private function checkbox(string $key, string $label, array $opts): void
     {
-        $checked = !empty($opts[$key]) ? 'checked' : '';
-        echo '<p><label><input type="checkbox" name="' . esc_attr($key) . '" value="1" ' . $checked . ' /> ' . esc_html($label) . '</label></p>';
+        $checked = !empty($opts[$key]);
+        echo '<p><label><input type="checkbox" name="' . esc_attr($key) . '" value="1" ' . checked($checked, true, false) . ' /> ' . esc_html($label) . '</label></p>';
     }
 
     /**
@@ -249,8 +250,7 @@ final class NetworkSettingsPage
         echo '<p><label for="' . esc_attr($key) . '">' . esc_html($label) . '</label><br />';
         echo '<select id="' . esc_attr($key) . '" name="' . esc_attr($key) . '">';
         foreach ($choices as $value => $text) {
-            $sel = ((string) $value === $current) ? 'selected' : '';
-            echo '<option value="' . esc_attr((string) $value) . '" ' . $sel . '>' . esc_html($text) . '</option>';
+            echo '<option value="' . esc_attr((string) $value) . '" ' . selected((string) $value, $current, false) . '>' . esc_html($text) . '</option>';
         }
         echo '</select></p>';
     }

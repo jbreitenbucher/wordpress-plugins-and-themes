@@ -5,7 +5,7 @@
  * Aaron Axelsen, Sean Wedig, Dexter Arver, Alex Barker, Hugo Salgado, Patrick Cavit, and Alistair Young.
  * The plugin to overrides WordPress authentication using an LDAP server (plus optional SSO), with multisite
  * provisioning and admin tools.
- * Version: 4.0.0
+ * Version: 4.0.1
  * Author: The College of Wooster
  * Requires at least: 6.9
  * Requires PHP:      8.3

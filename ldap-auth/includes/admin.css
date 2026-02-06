@@ -1,0 +1,11 @@
+.ldap-auth-panel {
+  padding: 8px 0;
+}
+
+.ldap-auth-test {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  padding: 12px;
+  max-width: 900px;
+  white-space: pre-wrap;
+}

@@ -84,12 +84,7 @@ final class GroupChecker
         $groups = $client->search_all($baseDn, $filter, [$dnAttr]);
         $userGroups = [];
         foreach ($groups as $g) {
-            $dn = '';
-            if (isset($g['dn'])) {
-                $dn = strtolower((string) $g['dn']);
-            } elseif (isset($g[strtolower($dnAttr)])) {
-                $dn = strtolower((string) ($g[strtolower($dnAttr)][0] ?? ''));
-            }
+            $dn = strtolower(Mapper::extract_dn($g, $dnAttr));
             if ($dn) {
                 $userGroups[] = $dn;
                 if (in_array($dn, $requiredGroups, true)) {
@@ -135,12 +130,7 @@ final class GroupChecker
             $filter = '(&(' . $memberAttr . '=' . ldap_escape($groupDn, '', LDAP_ESCAPE_FILTER) . ')(objectclass=' . ldap_escape($groupObjClass, '', LDAP_ESCAPE_FILTER) . '))';
             $entries = $client->search_all($baseDn, $filter, [$dnAttr]);
             foreach ($entries as $e) {
-                $dn = '';
-                if (isset($e['dn'])) {
-                    $dn = strtolower((string) $e['dn']);
-                } elseif (isset($e[strtolower($dnAttr)])) {
-                    $dn = strtolower((string) ($e[strtolower($dnAttr)][0] ?? ''));
-                }
+                $dn = strtolower(Mapper::extract_dn($e, $dnAttr));
                 if ($dn === '') {
                     continue;
                 }

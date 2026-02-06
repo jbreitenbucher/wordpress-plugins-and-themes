@@ -9,6 +9,35 @@ defined('ABSPATH') || exit;
 final class Mapper
 {
     /**
+     * Extract a DN from an LDAP entry.
+     *
+     * LDAP results may provide:
+     *  - $entry['dn'] as a string
+     *  - a configured DN attribute (often array-valued) like distinguishedName
+     *
+     * @param array<string,mixed> $entry
+     */
+    public static function extract_dn(array $entry, ?string $dnAttr = null): string
+    {
+        if (isset($entry['dn']) && is_string($entry['dn'])) {
+            return $entry['dn'];
+        }
+
+        $dnAttr = $dnAttr ? strtolower($dnAttr) : strtolower(Options::get_string('ldapAttributeDN', 'dn'));
+        if ($dnAttr !== '' && isset($entry[$dnAttr])) {
+            $val = $entry[$dnAttr];
+            if (is_array($val) && isset($val[0]) && is_string($val[0])) {
+                return $val[0];
+            }
+            if (is_string($val)) {
+                return $val;
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * Attributes to request for user lookup.
      *
      * @return string[]
@@ -38,12 +67,7 @@ final class Mapper
         $phoneAttr = Options::get_string('ldapAttributePhone', 'phone');
         $nickAttr = Options::get_string('ldapAttributeNickname', '');
 
-        $dn = '';
-        if (isset($entry['dn'])) {
-            $dn = (string) $entry['dn'];
-        } elseif (isset($entry[Options::get_string('ldapAttributeDN', 'dn')])) {
-            $dn = (string) $entry[Options::get_string('ldapAttributeDN', 'dn')];
-        }
+        $dn = self::extract_dn($entry);
 
         return [
             'dn' => $dn,

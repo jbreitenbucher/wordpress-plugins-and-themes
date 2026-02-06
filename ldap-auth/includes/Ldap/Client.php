@@ -8,13 +8,9 @@ defined('ABSPATH') || exit;
 
 final class Client
 {
-    /** @var \LDAP\Connection|resource */
-    private $conn;
+    private \LDAP\Connection $conn;
 
-    /**
-     * @param \LDAP\Connection|resource $conn
-     */
-    public function __construct($conn)
+    public function __construct(\LDAP\Connection $conn)
     {
         $this->conn = $conn;
     }

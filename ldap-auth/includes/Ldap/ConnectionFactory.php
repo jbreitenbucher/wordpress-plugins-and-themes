@@ -9,10 +9,7 @@ defined('ABSPATH') || exit;
 
 final class ConnectionFactory
 {
-    /**
-     * @return \LDAP\Connection|resource|null
-     */
-    public function connect()
+    public function connect(): ?\LDAP\Connection
     {
         $server = trim(Options::get_string('ldapServerAddr'));
         $port   = Options::get_int('ldapServerPort', 0);

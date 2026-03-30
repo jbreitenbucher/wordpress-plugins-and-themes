@@ -39,5 +39,9 @@ No. It iframes a self-hosted PDF.js viewer for consistent behavior.
 
 == Changelog ==
 
+= 1.0.1 =
+* Update the block so the block meets WCAG 2.2 AA standard
+* If the framed PDF is not WCAG 2.2 AA compliant then the final rendered page will not be WCAG 2.2 AA compliant
+
 = 1.0.0 =
 * Initial release.

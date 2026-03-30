@@ -3,7 +3,7 @@
  * Plugin Name:       Wooster SharePoint PDF Block
  * Description:       Gutenberg block to embed SharePoint PDFs via “Anyone” share links using a self-hosted
  *                    PDF.js viewer (no Media Library uploads, no raw-PDF iframe).
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            The College of Wooster
  * Requires at least: 6.2
  * Requires PHP:      7.4
@@ -162,10 +162,20 @@ public static function render_block( array $attributes, string $content = '', $b
             ? get_block_wrapper_attributes( [ 'class' => 'wspdf-embed' ] )
             : 'class="wspdf-embed"';
 
+        // Build a descriptive iframe title for screen readers (WCAG 4.1.2, 2.4.1).
+        $iframe_title = $filename !== ''
+            ? sprintf(
+                /* translators: %s: PDF filename */
+                __( '%s — PDF viewer', 'wooster-sharepoint-pdf-block' ),
+                $filename
+            )
+            : __( 'PDF document viewer', 'wooster-sharepoint-pdf-block' );
+
         return sprintf(
-            '<div %s><iframe class="wspdf-viewer" src="%s" style="display:block;width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe></div>',
+            '<div %s><iframe class="wspdf-viewer" src="%s" title="%s" style="display:block;width:100%%;height:%dpx;border:0;" loading="lazy" referrerpolicy="no-referrer"></iframe></div>',
             $wrapper_attrs,
             esc_url( $viewer_url ),
+            esc_attr( $iframe_title ),
             (int) $height
         );
     }
@@ -347,12 +357,14 @@ public static function render_block( array $attributes, string $content = '', $b
         exit;
     }
 
+
     /**
      * /wp-json/wspdf/v1/viewer?u=<b64url(share_url)>&fn=<filename>
-     * Minimal canvas-only renderer:
+     * PDF.js renderer with:
      * - continuous scroll
      * - fit-to-width (uses full iframe width)
-     * - no text layer / no annotation UI
+     * - text layer for screen reader access (WCAG 1.1.1, 1.3.1)
+     * - full WCAG 2.2 AA toolbar and focus management
      */
     public static function rest_viewer_html( WP_REST_Request $request ) {
         $u  = (string) $request->get_param( 'u' );
@@ -362,26 +374,34 @@ public static function render_block( array $attributes, string $content = '', $b
         if ( ! $share_url || ! self::is_allowed_sharepoint_url( $share_url ) ) {
             status_header( 400 );
             header( 'Content-Type: text/html; charset=utf-8' );
-            echo '<!doctype html><meta charset="utf-8"><p>Invalid SharePoint URL.</p>';
+            echo '<!doctype html><html lang="en"><meta charset="utf-8"><p>Invalid SharePoint URL.</p></html>';
             exit;
         }
 
         $pdf_args = [
-                'u' => self::b64url_encode( trim( $share_url ) ),
-            ];
-            $safe_fn = sanitize_file_name( (string) $fn );
-            if ( $safe_fn !== '' ) {
-                $pdf_args['fn'] = $safe_fn;
-            }
+            'u' => self::b64url_encode( trim( $share_url ) ),
+        ];
+        $safe_fn = sanitize_file_name( (string) $fn );
+        if ( $safe_fn !== '' ) {
+            $pdf_args['fn'] = $safe_fn;
+        }
 
-            $pdf_url = add_query_arg(
-                $pdf_args,
-                rest_url( self::NS . '/pdf' )
-            );
+        $pdf_url = add_query_arg(
+            $pdf_args,
+            rest_url( self::NS . '/pdf' )
+        );
 
-        $pdfjs_url   = add_query_arg( [ 'f' => 'pdf' ], rest_url( self::NS . '/asset' ) );
-        $worker_url  = add_query_arg( [ 'f' => 'worker' ], rest_url( self::NS . '/asset' ) );
-        $title_label = $fn ? (string) $fn : 'PDF';
+        $pdfjs_url  = add_query_arg( [ 'f' => 'pdf' ], rest_url( self::NS . '/asset' ) );
+        $worker_url = add_query_arg( [ 'f' => 'worker' ], rest_url( self::NS . '/asset' ) );
+
+        // Human-readable document label used in aria-label and <title>.
+        $doc_label = $safe_fn !== '' ? $safe_fn : 'PDF document';
+
+        // Download button aria-label includes filename so screen reader users
+        // know exactly what they are downloading (WCAG 2.4.6).
+        $download_label = $safe_fn !== ''
+            ? sprintf( 'Download %s (PDF)', $safe_fn )
+            : 'Download PDF';
 
         nocache_headers();
         header( 'Content-Type: text/html; charset=utf-8' );
@@ -391,12 +411,13 @@ public static function render_block( array $attributes, string $content = '', $b
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo esc_html( $title_label ); ?></title>
+    <title><?php echo esc_html( $doc_label ); ?></title>
     <style>
         html, body { height: 100%; margin: 0; }
         body { background: #f3f4f6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
         #app { height: 100%; display: flex; flex-direction: column; }
 
+        /* ── Toolbar ── */
         #toolbar {
             display: flex;
             align-items: center;
@@ -405,6 +426,7 @@ public static function render_block( array $attributes, string $content = '', $b
             background: #ffffff;
             border-bottom: 1px solid rgba(0,0,0,0.08);
             box-sizing: border-box;
+            flex-shrink: 0;
         }
         #toolbar .spacer { flex: 1; }
         #toolbar button {
@@ -418,37 +440,140 @@ public static function render_block( array $attributes, string $content = '', $b
             line-height: 1.2;
         }
         #toolbar button:hover { background: #f3f4f6; }
-        #toolbar button:focus { outline: 2px solid rgba(0,0,0,0.25); outline-offset: 2px; }
-        #status { font-size: 13px; color: #111827; }
+        /* WCAG 2.4.7 — visible focus indicator with sufficient contrast */
+        #toolbar button:focus-visible {
+            outline: 3px solid #005fcc;
+            outline-offset: 2px;
+        }
+        #status { font-size: 13px; color: #111827; min-width: 8ch; }
 
+        /* ── Page scroller ── */
         #scroller { flex: 1; overflow: auto; padding: 12px; box-sizing: border-box; }
-        .page { display: flex; justify-content: center; margin: 0 auto 14px auto; width: 100%; }
-        canvas { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-radius: 6px; display: block; }
+
+        /* Each page wrapper is position:relative so the text layer can overlay the canvas */
+        .page {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            margin: 0 auto 14px auto;
+            width: 100%;
+        }
+        canvas {
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            border-radius: 6px;
+            display: block;
+        }
+
+        /* ── PDF.js text layer (WCAG 1.1.1 / 1.3.1) ──
+         * Positioned absolutely over the canvas so screen readers can traverse
+         * the actual PDF text content. Visually transparent; pointer-events none
+         * so mouse interaction falls through to the canvas beneath.
+         * Do NOT use display:none or visibility:hidden — that removes it from
+         * the accessibility tree entirely.
+         */
+        .textLayer {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+            pointer-events: none;
+            color: transparent;
+            line-height: 1;
+        }
+        .textLayer span,
+        .textLayer br {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            transform-origin: 0% 0%;
+            pointer-events: none;
+        }
+
+        /* Visually-hidden utility — keeps content in the accessibility tree
+         * without taking up visual space. Do NOT use display:none. */
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        }
     </style>
 </head>
 <body>
     <div id="app">
-        <div id="toolbar" role="toolbar" aria-label="PDF actions">
-            <button id="btnDownload" type="button">Download</button>
-            <button id="btnPrint" type="button">Print</button>
+        <!--
+            role="toolbar" groups the controls for AT users.
+            aria-label names the toolbar so it is distinguishable from any
+            other landmarks on the page (WCAG 1.3.6, 2.4.6).
+        -->
+        <div id="toolbar" role="toolbar" aria-label="PDF viewer controls">
+
+            <!-- aria-label spells out exactly what will be downloaded (WCAG 2.4.6) -->
+            <button id="btnDownload" type="button"
+                    aria-label="<?php echo esc_attr( $download_label ); ?>">
+                Download
+            </button>
+
+            <button id="btnPrint" type="button" aria-label="Print this PDF">
+                Print
+            </button>
+
             <div class="spacer" aria-hidden="true"></div>
-            <div id="status" aria-live="polite">Loading PDF…</div>
+
+            <!--
+                role="status" + aria-live="polite" announces load progress and
+                errors to screen readers without interrupting ongoing speech
+                (WCAG 4.1.3). aria-atomic="true" ensures the full message is
+                read, not just the changed portion.
+            -->
+            <div id="status" role="status" aria-live="polite" aria-atomic="true">
+                Loading PDF&#x2026;
+            </div>
         </div>
-        <div id="scroller" role="document" aria-label="PDF document"></div>
+
+        <!--
+            role="region" + aria-labelledby creates a named landmark so keyboard
+            users can jump directly here via their screen reader landmark
+            navigation (WCAG 1.3.6, 2.4.1).
+            tabindex="0" makes the region itself focusable so keyboard users
+            can scroll it with arrow keys after tabbing into it.
+        -->
+        <div id="scroller" role="region" aria-labelledby="scrollerHeading" tabindex="0">
+            <!-- Visually hidden heading labels the region for AT (WCAG 2.4.6) -->
+            <h1 id="scrollerHeading" class="sr-only"><?php echo esc_html( $doc_label ); ?></h1>
+        </div>
     </div>
 
     <?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
-	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
-	<script src="<?php echo esc_url( $pdfjs_url ); ?>"></script>
+    <script src="<?php echo esc_url( $pdfjs_url ); ?>"></script>
     <script>
     (function () {
-        const pdfUrl = <?php echo wp_json_encode( $pdf_url ); ?>;
-        const workerUrl = <?php echo wp_json_encode( $worker_url ); ?>;
+        'use strict';
 
-        const statusEl = document.getElementById('status');
-        const scroller = document.getElementById('scroller');
+        const pdfUrl    = <?php echo wp_json_encode( $pdf_url ); ?>;
+        const workerUrl = <?php echo wp_json_encode( $worker_url ); ?>;
+        const docLabel  = <?php echo wp_json_encode( $doc_label ); ?>;
+
+        const statusEl    = document.getElementById('status');
+        const scroller    = document.getElementById('scroller');
         const btnDownload = document.getElementById('btnDownload');
-        const btnPrint = document.getElementById('btnPrint');
+        const btnPrint    = document.getElementById('btnPrint');
+
+        /* ── Helpers ── */
+
+        // Tracks the last meaningful status string so transient messages
+        // (e.g. "Preparing download…") can restore it afterwards.
+        let currentStatus = 'Loading PDF\u2026';
+
+        function setStatus(msg, transient) {
+            statusEl.textContent = msg;
+            if (!transient) currentStatus = msg;
+        }
 
         function withDl(url) {
             try {
@@ -461,7 +586,6 @@ public static function render_block( array $attributes, string $content = '', $b
         }
 
         function triggerDownload(url) {
-            // Use a plain <a> click so browsers treat it as a user gesture.
             const a = document.createElement('a');
             a.href = url;
             a.target = '_blank';
@@ -471,22 +595,25 @@ public static function render_block( array $attributes, string $content = '', $b
             a.remove();
         }
 
+        /* ── Toolbar button handlers ── */
+
         if (btnDownload) {
             btnDownload.addEventListener('click', () => {
+                // Announce action to AT (WCAG 4.1.3).
+                setStatus('Preparing download\u2026', true);
                 triggerDownload(withDl(pdfUrl));
+                setTimeout(() => setStatus(currentStatus), 1500);
             });
         }
 
         if (btnPrint) {
             btnPrint.addEventListener('click', () => {
-                // Canvas-only rendering is not “printable” by default. Print the proxied PDF itself.
+                // Announce to AT that something is happening (WCAG 4.1.3).
+                setStatus('Opening print dialog\u2026', true);
+
                 const frame = document.createElement('iframe');
-                frame.style.position = 'fixed';
-                frame.style.right = '0';
-                frame.style.bottom = '0';
-                frame.style.width = '0';
-                frame.style.height = '0';
-                frame.style.border = '0';
+                frame.setAttribute('title', 'PDF print frame');
+                frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
                 frame.src = pdfUrl;
                 document.body.appendChild(frame);
 
@@ -495,56 +622,54 @@ public static function render_block( array $attributes, string $content = '', $b
                         frame.contentWindow.focus();
                         frame.contentWindow.print();
                     } catch (e) {
-                        // Fallback: open PDF in a new tab so the user can print from the browser viewer.
+                        // Cross-origin fallback: open in new tab so the user
+                        // can use the browser's own print UI.
                         window.open(pdfUrl, '_blank', 'noopener');
                     } finally {
-                        setTimeout(() => frame.remove(), 2000);
+                        setTimeout(() => {
+                            frame.remove();
+                            setStatus(currentStatus);
+                        }, 2000);
                     }
                 };
             });
         }
 
-
-        function setStatus(msg) { statusEl.textContent = msg; }
+        /* ── PDF.js setup ── */
 
         if (!window.pdfjsLib) {
-            setStatus('PDF.js failed to load.');
+            setStatus('Error: PDF viewer failed to load.');
             return;
         }
         pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
-        let pdfDoc = null;
-        let pageCount = 0;
-        let pageAspect = 1.294; // fallback (height/width)
-        const rendered = new Map(); // pageNumber -> { canvas, rendering, renderedOnce }
+        let pdfDoc     = null;
+        let pageCount  = 0;
+        let pageAspect = 1.294; // height/width fallback (US Letter ~1.294)
+        // pageNumber -> { wrap, canvas, textDiv, rendering, renderedOnce }
+        const rendered = new Map();
+
+        /* ── Layout helpers ── */
 
         function innerScrollerWidth() {
-            const cs = getComputedStyle(scroller);
-            const padL = parseFloat(cs.paddingLeft) || 0;
+            const cs   = getComputedStyle(scroller);
+            const padL = parseFloat(cs.paddingLeft)  || 0;
             const padR = parseFloat(cs.paddingRight) || 0;
-            const raw = (scroller.clientWidth || document.documentElement.clientWidth || window.innerWidth || 980) - padL - padR;
+            const raw  = (scroller.clientWidth || document.documentElement.clientWidth || window.innerWidth || 980) - padL - padR;
             return Math.max(320, raw);
         }
 
         function makeViewport(page, scale, rotation) {
-            // Support both legacy signature getViewport(scale, rotation) and modern getViewport({ scale, rotation }).
+            // Support both legacy getViewport(scale, rotation) and modern
+            // getViewport({ scale, rotation }) signatures across PDF.js versions.
             let vp = null;
-
-            try {
-                vp = page.getViewport({ scale: scale, rotation: rotation || 0 });
-            } catch (e) {}
-
+            try { vp = page.getViewport({ scale, rotation: rotation || 0 }); } catch (e) {}
             if (!vp || !Number.isFinite(vp.width) || vp.width <= 0 || !Number.isFinite(vp.height) || vp.height <= 0) {
-                try {
-                    vp = (rotation !== undefined) ? page.getViewport(scale, rotation) : page.getViewport(scale);
-                } catch (e) {}
+                try { vp = (rotation !== undefined) ? page.getViewport(scale, rotation) : page.getViewport(scale); } catch (e) {}
             }
-
-            // Last-resort fallback
             if (!vp || !Number.isFinite(vp.width) || vp.width <= 0 || !Number.isFinite(vp.height) || vp.height <= 0) {
                 try { vp = page.getViewport(1); } catch (e) {}
             }
-
             return vp;
         }
 
@@ -556,7 +681,14 @@ public static function render_block( array $attributes, string $content = '', $b
             }
         }
 
+        /* ── DOM construction ── */
+
         function buildPlaceholders(numPages) {
+            // Preserve the sr-only heading that labels the region.
+            const heading = document.getElementById('scrollerHeading');
+            scroller.innerHTML = '';
+            if (heading) scroller.appendChild(heading);
+
             const frag = document.createDocumentFragment();
             const w = innerScrollerWidth();
             const h = Math.round(w * pageAspect);
@@ -568,16 +700,25 @@ public static function render_block( array $attributes, string $content = '', $b
                 wrap.style.minHeight = h + 'px';
 
                 const canvas = document.createElement('canvas');
-                canvas.setAttribute('aria-label', 'Page ' + i);
-                canvas.style.width = w + 'px';
+                // role="img" + aria-label gives AT users page orientation.
+                // The text layer below provides the actual readable content.
+                canvas.setAttribute('role', 'img');
+                canvas.setAttribute('aria-label', 'Page ' + i + ' of ' + numPages);
+                canvas.style.width  = w + 'px';
                 canvas.style.height = h + 'px';
 
+                // Text layer container — overlaid on the canvas, sized to match.
+                const textDiv = document.createElement('div');
+                textDiv.className = 'textLayer';
+                textDiv.style.width  = w + 'px';
+                textDiv.style.height = h + 'px';
+
                 wrap.appendChild(canvas);
-                rendered.set(i, { canvas, rendering: false, renderedOnce: false });
+                wrap.appendChild(textDiv);
+                rendered.set(i, { wrap, canvas, textDiv, rendering: false, renderedOnce: false });
                 frag.appendChild(wrap);
             }
 
-            scroller.innerHTML = '';
             scroller.appendChild(frag);
         }
 
@@ -589,6 +730,49 @@ public static function render_block( array $attributes, string $content = '', $b
             ctx.restore();
         }
 
+        /* ── Manual text layer for PDF.js 2.x (e.g. 2.5.5) ──
+         * In the 2.x UMD build, renderTextLayer is not reliably exposed on
+         * pdfjsLib. We reconstruct it from textContent.items, which are plain
+         * objects with { str, transform, width, height } fields.
+         * Each item's transform is a 6-element CSS matrix [a,b,c,d,e,f] in
+         * PDF coordinate space (origin bottom-left). The viewport's transform
+         * maps that to canvas/CSS space (origin top-left).
+         */
+        function renderTextLayerManual(container, items, viewport) {
+            const vt = viewport.transform; // [scaleX, skewY, skewX, scaleY, dx, dy]
+
+            for (const item of items) {
+                if (!item.str || item.str.trim() === '') continue;
+
+                const tx = item.transform; // PDF glyph matrix
+                if (!tx || tx.length < 6) continue;
+
+                // Combine the item's glyph transform with the viewport transform.
+                // Result gives us the CSS position of the glyph origin in px.
+                const x = vt[0] * tx[4] + vt[2] * tx[5] + vt[4];
+                const y = vt[1] * tx[4] + vt[3] * tx[5] + vt[5];
+
+                // Font size: scale the glyph height (tx[3]) by the viewport scale.
+                const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
+                const fontSize   = Math.abs(fontHeight * viewport.scale);
+                if (fontSize < 1) continue;
+
+                const span = document.createElement('span');
+                span.textContent = item.str;
+                span.style.cssText = [
+                    'font-size:' + fontSize + 'px',
+                    'left:'      + x + 'px',
+                    'top:'       + (viewport.height - y) + 'px',
+                    // Stretch the span to match the item's rendered width if available.
+                    item.width ? 'width:' + (item.width * viewport.scale) + 'px' : '',
+                ].filter(Boolean).join(';');
+
+                container.appendChild(span);
+            }
+        }
+
+        /* ── Render pipeline ── */
+
         async function renderPage(pageNumber) {
             if (!pdfDoc) return;
             const rec = rendered.get(pageNumber);
@@ -599,50 +783,91 @@ public static function render_block( array $attributes, string $content = '', $b
             try {
                 const page = await pdfDoc.getPage(pageNumber);
 
-                const w = innerScrollerWidth();
-                const viewport1 = makeViewport(page, 1);
-                const baseW = (viewport1 && Number.isFinite(viewport1.width) && viewport1.width > 0) ? viewport1.width : w;
-                const scale = Math.max(0.1, w / baseW);
-
+                const w        = innerScrollerWidth();
+                const vp1      = makeViewport(page, 1);
+                const baseW    = (vp1 && Number.isFinite(vp1.width) && vp1.width > 0) ? vp1.width : w;
+                const scale    = Math.max(0.1, w / baseW);
                 const viewport = makeViewport(page, scale);
+
                 if (!viewport || !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height) || viewport.width <= 0 || viewport.height <= 0) {
                     throw new Error('Bad viewport');
                 }
+
                 const dpr = window.devicePixelRatio || 1;
 
-                rec.canvas.style.width = Math.round(viewport.width) + 'px';
+                // ── Canvas render ──
+                rec.canvas.style.width  = Math.round(viewport.width)  + 'px';
                 rec.canvas.style.height = Math.round(viewport.height) + 'px';
-
-                rec.canvas.width  = Math.max(1, Math.floor(viewport.width * dpr));
-                rec.canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
+                rec.canvas.width        = Math.max(1, Math.floor(viewport.width  * dpr));
+                rec.canvas.height       = Math.max(1, Math.floor(viewport.height * dpr));
 
                 const ctx = rec.canvas.getContext('2d', { alpha: true });
                 clearCanvasWhite(ctx, rec.canvas);
 
                 await page.render({
                     canvasContext: ctx,
-                    viewport: viewport,
+                    viewport,
                     transform: [dpr, 0, 0, dpr, 0, 0],
                     intent: 'display'
                 }).promise;
 
+                // Canvas render succeeded — mark done before attempting text layer
+                // so a text layer failure never takes down the visible render.
                 rec.renderedOnce = true;
-                rec.rendering = false;
+                rec.rendering    = false;
+
+                // ── Text layer (WCAG 1.1.1, 1.3.1) ──
+                // Isolated in its own try/catch: if it fails for any reason the
+                // canvas render is already committed above and sighted users are
+                // unaffected. AT users fall back to the canvas aria-label.
+                try {
+                    rec.textDiv.style.width  = Math.round(viewport.width)  + 'px';
+                    rec.textDiv.style.height = Math.round(viewport.height) + 'px';
+                    rec.textDiv.innerHTML    = ''; // clear any prior render on resize
+
+                    const textContent = await page.getTextContent();
+                    if (!textContent || !textContent.items || textContent.items.length === 0) {
+                        // Scanned / image-only page — nothing to render.
+                        return;
+                    }
+
+                    if (typeof pdfjsLib.renderTextLayer === 'function') {
+                        // PDF.js 3.x+ — renderTextLayer is on pdfjsLib directly.
+                        pdfjsLib.renderTextLayer({
+                            textContentSource: textContent,
+                            container: rec.textDiv,
+                            viewport,
+                            textDivs: []
+                        });
+                    } else {
+                        // PDF.js 2.x (including 2.5.5) — renderTextLayer is NOT
+                        // reliably exposed on pdfjsLib in the UMD build. Build the
+                        // text layer manually from textContent.items instead.
+                        renderTextLayerManual(rec.textDiv, textContent.items, viewport);
+                    }
+                } catch (textErr) {
+                    // Silently swallow — canvas is already rendered and committed.
+                }
+
             } catch (e) {
                 rec.rendering = false;
-                setStatus('Render failed (page ' + pageNumber + ').');
+                // Only surface canvas render errors for page 1 to avoid flooding
+                // the status region on large documents.
+                if (pageNumber === 1) {
+                    setStatus('Error: could not render page 1. The PDF may be damaged or unsupported.');
+                }
             }
         }
 
+        /* ── Visibility / lazy rendering ── */
+
         function renderVisiblePages() {
-            const top = scroller.scrollTop;
+            const top    = scroller.scrollTop;
             const bottom = top + scroller.clientHeight;
-
             for (const el of scroller.querySelectorAll('.page')) {
-                const pn = parseInt(el.dataset.pageNumber, 10);
-                const rectTop = el.offsetTop;
+                const pn         = parseInt(el.dataset.pageNumber, 10);
+                const rectTop    = el.offsetTop;
                 const rectBottom = rectTop + el.offsetHeight;
-
                 if (rectBottom >= top - 1200 && rectTop <= bottom + 1200) {
                     renderPage(pn);
                 }
@@ -652,18 +877,12 @@ public static function render_block( array $attributes, string $content = '', $b
         function startObservers() {
             try {
                 if (!('IntersectionObserver' in window)) throw new Error('no IO');
-
                 const io = new IntersectionObserver((entries) => {
                     for (const entry of entries) {
                         if (!entry.isIntersecting) continue;
-                        const pn = parseInt(entry.target.dataset.pageNumber, 10);
-                        renderPage(pn);
+                        renderPage(parseInt(entry.target.dataset.pageNumber, 10));
                     }
-                }, {
-                    root: scroller,
-                    rootMargin: '900px 0px',
-                    threshold: 0.01
-                });
+                }, { root: scroller, rootMargin: '900px 0px', threshold: 0.01 });
 
                 scroller.querySelectorAll('.page').forEach(el => io.observe(el));
             } catch (e) {
@@ -672,22 +891,23 @@ public static function render_block( array $attributes, string $content = '', $b
             }
         }
 
+        /* ── Resize handling ── */
+
         let resizeTimer = null;
         function handleResize() {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 if (!pdfDoc) return;
-
                 const w = innerScrollerWidth();
                 const h = Math.round(w * pageAspect);
-
                 for (const rec of rendered.values()) {
                     if (!rec.renderedOnce) {
-                        rec.canvas.style.width = w + 'px';
-                        rec.canvas.style.height = h + 'px';
+                        rec.canvas.style.width   = w + 'px';
+                        rec.canvas.style.height  = h + 'px';
+                        rec.textDiv.style.width  = w + 'px';
+                        rec.textDiv.style.height = h + 'px';
                     }
                 }
-
                 for (const [pn, rec] of rendered.entries()) {
                     if (rec.renderedOnce) {
                         rec.rendering = false;
@@ -698,9 +918,11 @@ public static function render_block( array $attributes, string $content = '', $b
         }
         window.addEventListener('resize', handleResize);
 
+        /* ── Failure diagnostics ── */
+
         async function getFailureHint() {
             try {
-                const r = await fetch(pdfUrl, { method: 'GET', cache: 'no-store' });
+                const r  = await fetch(pdfUrl, { method: 'GET', cache: 'no-store' });
                 const ct = (r.headers.get('content-type') || '').toLowerCase();
                 if (!r.ok) return 'HTTP ' + r.status;
                 if (!ct.includes('application/pdf')) return 'Unexpected content-type';
@@ -710,35 +932,47 @@ public static function render_block( array $attributes, string $content = '', $b
             }
         }
 
+        /* ── Init ── */
+
         (async function init() {
             try {
-                setStatus('Loading PDF…');
+                setStatus('Loading PDF\u2026');
 
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     withCredentials: false,
                     // WordPress REST proxy does not reliably support HTTP Range/streaming.
-                    disableRange: true,
-                    disableStream: true,
+                    disableRange:     true,
+                    disableStream:    true,
                     disableAutoFetch: false
                 });
-                pdfDoc = await loadingTask.promise;
 
+                pdfDoc    = await loadingTask.promise;
                 pageCount = pdfDoc.numPages;
+
                 await computeAspectFromFirstPage();
 
-                setStatus('Loaded ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') + '.');
+                const pageWord = pageCount === 1 ? 'page' : 'pages';
+                setStatus(docLabel + ', ' + pageCount + ' ' + pageWord + '. Use Tab to access toolbar controls.');
 
                 buildPlaceholders(pageCount);
                 startObservers();
 
                 requestAnimationFrame(() => renderPage(1));
                 requestAnimationFrame(() => renderPage(2));
+
             } catch (e) {
-                const hint = await getFailureHint();
-                setStatus('Failed to load PDF (' + hint + ').');
+                const hint   = await getFailureHint();
+                const errMsg = 'Error: failed to load PDF (' + hint + ').';
+                setStatus(errMsg);
+
+                // Move focus to the status element so keyboard and AT users are
+                // immediately informed of the failure (WCAG 2.4.3).
+                statusEl.setAttribute('tabindex', '-1');
+                statusEl.focus();
             }
         })();
+
     })();
     </script>
 </body>
@@ -746,6 +980,7 @@ public static function render_block( array $attributes, string $content = '', $b
         <?php
         exit;
     }
+
 
     /* ------------------------- Helpers ------------------------- */
 

@@ -3,7 +3,7 @@
  * Plugin Name:       Wooster Block Patterns
  * Description:       Curated block patterns and custom blocks for College of Wooster department and office
  *                    sites.
- * Version:           1.4.1
+ * Version:           1.4.2
  * Author:            The College of Wooster
  * Requires at least: 6.5
  * Requires PHP:      7.4

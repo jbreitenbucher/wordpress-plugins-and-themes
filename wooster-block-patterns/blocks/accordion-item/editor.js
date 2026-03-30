@@ -100,7 +100,11 @@
       const { attributes = {} } = props;
       const { title = 'Section title', open = false, uid } = attributes;
 
-      const stableUid = uid || Math.random().toString(36).slice(2);
+      // Deterministic fallback: hash the title so the same content always
+      // produces the same ID, avoiding broken aria-controls on re-render.
+      const stableUid = uid || ( title
+        ? String( title ).split( '' ).reduce( ( h, c ) => ( ( h << 5 ) - h + c.charCodeAt( 0 ) ) | 0, 0 ).toString( 36 ).replace( '-', 'n' )
+        : 'item' );
       const controlId = 'wbp-acc-control-' + stableUid;
       const panelId   = 'wbp-acc-panel-' + stableUid;
 

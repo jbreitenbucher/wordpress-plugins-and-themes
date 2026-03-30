@@ -126,7 +126,7 @@ if ( ! function_exists( 'wbp_render_toc_block' ) ) {
 			data-max-depth="<?php echo esc_attr( $max_depth ); ?>"
 		>
 			<div class="wbp-toc__header">
-			<span id="<?php echo esc_attr( $title_id ); ?>" class="wbp-toc__title" role="heading" aria-level="2">
+			<span id="<?php echo esc_attr( $title_id ); ?>" class="wbp-toc__title">
 				<?php echo esc_html( $title ?: __( 'On this page', 'wooster-block-patterns' ) ); ?>
 			</span>
 			<button type="button" class="wbp-toc__toggle" aria-controls="<?php echo esc_attr( $content_id ); ?>" aria-expanded="<?php echo $collapsed ? 'false' : 'true'; ?>">

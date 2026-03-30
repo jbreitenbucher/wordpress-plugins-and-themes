@@ -78,8 +78,12 @@
 .wbp-toc__list.level-4 { margin-left: 2rem; }
 .wbp-toc__list.level-5 { margin-left: 3rem; }
 .wbp-toc__list.level-6 { margin-left: 4rem; }
-.wbp-toc a { text-decoration: none; }
-.wbp-toc a:hover, .wbp-toc a:focus { text-decoration: underline; }
+/* Links: underline at rest so color is not the sole differentiator (SC 1.4.1) */
+.wbp-toc a { text-decoration: underline; }
+.wbp-toc a:hover { text-decoration: none; }
+/* Focus visibility on links (SC 2.4.7, SC 2.4.11) */
+.wbp-toc a:focus { outline: none; }
+.wbp-toc a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
 
 /* Editor-only: keep the header row from clipping the caret */
 .editor-styles-wrapper .wbp-toc__header { overflow: visible; }

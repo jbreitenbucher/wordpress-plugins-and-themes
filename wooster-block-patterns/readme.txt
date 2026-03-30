@@ -85,6 +85,9 @@ We ship placeholders in `assets/images/` and reference them so patterns work wit
 
 == Changelog ==
 
+= 1.4.2 =
+* Update to make sure blocks meet WCAG 2.2 AA standard.
+
 = 1.4.1 =
 * Ensures the **Wooster Blocks** inserter category (slug `wbp-content`) is always registered (and shown first), so custom blocks never fall back to Uncategorized.
 

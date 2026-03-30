@@ -68,6 +68,14 @@
 /* Editor-only collapse: hide panel in editor when not open */
 .wbp-accordion__panel[data-editor="1"][data-open="false"] { display: none; }
 
+/* Focus visibility (SC 2.4.7, SC 2.4.11) */
+.wbp-accordion__button:focus { outline: none; } /* suppress default; :focus-visible handles it */
+.wbp-accordion__button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .wbp-accordion__icon::before { transition: none; }

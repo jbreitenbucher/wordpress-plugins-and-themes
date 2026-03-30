@@ -144,7 +144,7 @@
 				// Editor preview (foldable)
 				el('nav', { ...blockProps, 'aria-label': 'Table of contents' },
 					el('div', { className: 'wbp-toc__header' },
-						el('span', { id: 'wbp-toc-title-' + clientId, className: 'wbp-toc__title', role: 'heading', 'aria-level': 2 }, title || 'On this page'),
+						el('span', { id: 'wbp-toc-title-' + clientId, className: 'wbp-toc__title' }, title || 'On this page'),
 						el('button', {
 							type: 'button',
 							className: 'wbp-toc__toggle',

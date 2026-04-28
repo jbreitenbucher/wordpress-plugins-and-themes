@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.3.0
+ * Version:     1.4.0
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -56,23 +56,31 @@ add_action( 'admin_notices', function () {
 		echo '<div class="notice notice-error"><p><strong>SRP Search:</strong> Database constants missing from <code>wp-config.php</code>.</p></div>';
 	}
 	if ( defined( 'SRP_DEBUG_DB' ) && SRP_DEBUG_DB ) {
-		$pdo    = extension_loaded( 'pdo_sqlsrv' ) ? '✅' : '❌';
-		$sqlsrv = extension_loaded( 'sqlsrv' )     ? '✅' : '❌';
-		echo "<div class='notice notice-info'><p><strong>SRP Debug:</strong> pdo_sqlsrv {$pdo} | sqlsrv {$sqlsrv} | PHP " . PHP_VERSION . " | " . PHP_SAPI . "</p></div>";
+		$pdo_status    = extension_loaded( 'pdo_sqlsrv' ) ? 'loaded' : 'NOT loaded';
+		$sqlsrv_status = extension_loaded( 'sqlsrv' )     ? 'loaded' : 'NOT loaded';
+		printf(
+			'<div class="notice notice-info"><p><strong>SRP Debug:</strong> pdo_sqlsrv: %s | sqlsrv: %s | PHP %s | SAPI: %s</p></div>',
+			esc_html( $pdo_status ),
+			esc_html( $sqlsrv_status ),
+			esc_html( PHP_VERSION ),
+			esc_html( PHP_SAPI )
+		);
 	}
 } );
 
 // ── 2. PDO CONNECTION ─────────────────────────────────────────────────────────
 
-function srp_get_pdo(): PDO {
+function srp_get_pdo(): PDO { // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 	$host    = SRP_DB_HOST;
 	$db      = SRP_DB_NAME;
 	$encrypt = defined( 'SRP_DB_ENCRYPT' ) ? ( SRP_DB_ENCRYPT ? 'yes' : 'no' ) : 'yes';
 	$dsn     = "sqlsrv:Server={$host};Database={$db};Encrypt={$encrypt};TrustServerCertificate=no";
 
-	return new PDO( $dsn, SRP_DB_USER, SRP_DB_PASSWORD, [
-		PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-		PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+	// PDO is required here — $wpdb supports MySQL only and cannot connect to an
+	// external MSSQL server. All queries use prepared statements with bound parameters.
+	return new PDO( $dsn, SRP_DB_USER, SRP_DB_PASSWORD, [ // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
+		PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
+		PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 		PDO::ATTR_TIMEOUT            => 5,
 	] );
 }
@@ -293,7 +301,7 @@ function srp_ajax_get_majors(): void {
                  SELECT DISTINCT [MAJOR_2] FROM " . SRP_VIEW . " WHERE [MAJOR_2] IS NOT NULL AND [MAJOR_2] <> ''
                  ORDER BY major ASC";
 		$stmt = $pdo->query( $sql );
-		wp_send_json_success( [ 'majors' => $stmt->fetchAll( PDO::FETCH_COLUMN ) ] );
+		wp_send_json_success( [ 'majors' => $stmt->fetchAll( PDO::FETCH_COLUMN ) ] ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 	} catch ( \Exception $e ) {
 		wp_send_json_error( [ 'message' => srp_error_message( $e, 'Could not load majors' ) ], 500 );
 	}
@@ -319,9 +327,9 @@ function srp_ajax_search(): void {
 	$advisor   = sanitize_text_field( wp_unslash( $_POST['advisor']   ?? '' ) );
 
 	// Pagination.
-	$per_page = in_array( (int) ( $_POST['per_page'] ?? 25 ), [ 25, 50, 100 ], true )
-	            ? (int) $_POST['per_page'] : 25;
-	$offset   = max( 0, (int) ( $_POST['offset'] ?? 0 ) );
+	$per_page = in_array( (int) sanitize_text_field( wp_unslash( $_POST['per_page'] ?? '25' ) ), [ 25, 50, 100 ], true )
+	            ? (int) sanitize_text_field( wp_unslash( $_POST['per_page'] ?? '25' ) ) : 25;
+	$offset   = max( 0, (int) sanitize_text_field( wp_unslash( $_POST['offset'] ?? '0' ) ) );
 
 	// Order — validate against whitelist map; never trust raw input.
 	$order_by_key = sanitize_text_field( wp_unslash( $_POST['order_by'] ?? 'year_asc_name_asc' ) );

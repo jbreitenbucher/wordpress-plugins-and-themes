@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.4.0
+ * Version:     1.5.0
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -74,14 +74,16 @@ function srp_get_pdo(): PDO { // phpcs:ignore WordPress.DB.RestrictedClasses.mys
 	$host    = SRP_DB_HOST;
 	$db      = SRP_DB_NAME;
 	$encrypt = defined( 'SRP_DB_ENCRYPT' ) ? ( SRP_DB_ENCRYPT ? 'yes' : 'no' ) : 'yes';
-	$dsn     = "sqlsrv:Server={$host};Database={$db};Encrypt={$encrypt};TrustServerCertificate=no";
+
+	// LoginTimeout is set in the DSN — PDO::ATTR_TIMEOUT is not supported by the
+	// sqlsrv driver and throws IMSSP if passed in the options array.
+	$dsn = "sqlsrv:Server={$host};Database={$db};Encrypt={$encrypt};TrustServerCertificate=no;LoginTimeout=5";
 
 	// PDO is required here — $wpdb supports MySQL only and cannot connect to an
 	// external MSSQL server. All queries use prepared statements with bound parameters.
 	return new PDO( $dsn, SRP_DB_USER, SRP_DB_PASSWORD, [ // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 		PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 		PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
-		PDO::ATTR_TIMEOUT            => 5,
 	] );
 }
 

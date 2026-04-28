@@ -250,7 +250,41 @@
 	padding-right: 1.5rem;
 }
 
-/* ── Responsive: stack on mobile ─────────────────────────── */
+/* ── iPad / tablet: condensed table (641px–1024px) ──────────── */
+@media ( min-width: 641px ) and ( max-width: 1024px ) {
+	.srp-table thead th,
+	.srp-table tbody td {
+		padding-top:    0.6rem;
+		padding-bottom: 0.6rem;
+		padding-left:   0.65rem;
+		padding-right:  0.65rem;
+	}
+
+	/* Restore edge breathing room on tablet */
+	.srp-table thead th:first-child,
+	.srp-table tbody td:first-child {
+		padding-left: 1rem;
+	}
+
+	.srp-table thead th:last-child,
+	.srp-table tbody td:last-child {
+		padding-right: 1rem;
+	}
+
+	/* Let Title wrap; keep other columns on one line */
+	.srp-table thead th,
+	.srp-table tbody td {
+		white-space: nowrap;
+	}
+
+	.srp-table thead th:nth-child(3),
+	.srp-table tbody td:nth-child(3) {
+		white-space: normal;
+		min-width: 160px;
+	}
+}
+
+/* ── Phone: card layout (≤ 640px) ───────────────────────────── */
 @media ( max-width: 640px ) {
 	.srp-form {
 		padding: 1.25rem 1rem 1rem;
@@ -260,32 +294,150 @@
 		grid-template-columns: 1fr;
 	}
 
+	/* Hide the table wrapper border — cards provide their own */
+	.srp-table-wrap {
+		border: none;
+		box-shadow: none;
+		background: transparent;
+	}
+
+	.srp-table,
+	.srp-table tbody {
+		display: block;
+		width: 100%;
+	}
+
+	/* Hide header row entirely */
 	.srp-table thead {
 		display: none;
 	}
 
+	/* Each row becomes a card */
 	.srp-table tbody tr {
 		display: block;
-		padding: 0.75rem 1rem;
+		background: #fff;
+		border: 1px solid var(--srp-border);
+		border-radius: 4px;
+		box-shadow: 0 1px 6px rgba(26,26,26,0.06);
+		margin-bottom: 0.875rem;
+		padding: 0;
+		overflow: hidden;
 	}
 
+	.srp-table tbody tr:last-child {
+		margin-bottom: 0;
+	}
+
+	/* Hide all td borders — card border handles that */
+	.srp-table tbody tr td {
+		border-bottom: 1px solid var(--srp-border);
+	}
+
+	.srp-table tbody tr td:last-child {
+		border-bottom: none;
+	}
+
+	/* All cells: default compact labeled row */
 	.srp-table tbody td {
 		display: flex;
+		align-items: baseline;
 		gap: 0.5rem;
-		padding: 0.2rem 0;
+		padding: 0.45rem 1rem;
 		font-size: 0.875rem;
+		line-height: 1.4;
 	}
 
-	.srp-table tbody td::before {
+	/* ── Student name — card header ── */
+	.srp-table tbody td[data-label="Student"] {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		background: var(--srp-black);
+		padding: 0.65rem 1rem;
+		border-bottom: 3px solid var(--srp-gold);
+	}
+
+	.srp-table tbody td[data-label="Student"]::before {
+		display: none; /* name speaks for itself */
+	}
+
+	.srp-table tbody td[data-label="Student"] {
+		font-family: 'Libre Baskerville', serif;
+		font-size: 1rem;
+		font-weight: 700;
+		color: #fff;
+	}
+
+	/* ── Year — badge on the right of the header ── */
+	.srp-table tbody td[data-label="Year"] {
+		display: block;
+		position: absolute; /* pulled into header row via sibling trick below */
+	}
+
+	/* Use a cleaner approach: Year sits inline as a pill in the header */
+	/* We achieve this by making Year appear after Student in the header bar */
+	.srp-table tbody tr {
+		position: relative;
+	}
+
+	.srp-table tbody td[data-label="Year"] {
+		position: absolute;
+		top: 0.55rem;
+		right: 1rem;
+		display: inline-block;
+		background: var(--srp-gold);
+		color: #fff;
+		font-family: 'Source Sans 3', sans-serif;
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		padding: 0.2rem 0.55rem;
+		border-radius: 2px;
+		border-bottom: none;
+	}
+
+	.srp-table tbody td[data-label="Year"]::before {
+		display: none;
+	}
+
+	/* ── Title — prominent, italic, full width ── */
+	.srp-table tbody td[data-label="Title"] {
+		display: block;
+		font-family: 'Libre Baskerville', serif;
+		font-style: italic;
+		font-size: 0.95rem;
+		color: #3a3530;
+		padding: 0.65rem 1rem 0.5rem;
+		line-height: 1.5;
+	}
+
+	.srp-table tbody td[data-label="Title"]::before {
+		display: none; /* title needs no label */
+	}
+
+	/* ── Metadata rows: Major 1, Major 2, Advisor ── */
+	.srp-table tbody td[data-label="Major 1"]::before,
+	.srp-table tbody td[data-label="Major 2"]::before,
+	.srp-table tbody td[data-label="Advisor"]::before {
 		content: attr(data-label);
 		font-family: 'Libre Baskerville', serif;
-		font-size: 0.7rem;
+		font-size: 0.68rem;
 		font-weight: 700;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--srp-muted);
-		min-width: 70px;
+		min-width: 62px;
+		flex-shrink: 0;
 		padding-top: 0.1rem;
+	}
+
+	.srp-table tbody td[data-label="Major 1"],
+	.srp-table tbody td[data-label="Major 2"],
+	.srp-table tbody td[data-label="Advisor"] {
+		background: var(--srp-cream);
+		font-size: 0.85rem;
+		padding-top: 0.4rem;
+		padding-bottom: 0.4rem;
 	}
 }
 

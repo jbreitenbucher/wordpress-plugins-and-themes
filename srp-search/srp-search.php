@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.5.0
+ * Version:     1.5.1
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -360,13 +360,17 @@ function srp_ajax_search(): void {
 	$where_clause = 'WHERE ' . implode( ' AND ', $where );
 
 	// Total count for Load More visibility.
-	$count_sql  = "SELECT COUNT(*) FROM " . SRP_VIEW . " {$where_clause}";
-	// Paginated results.
+	$count_sql = "SELECT COUNT(*) FROM " . SRP_VIEW . " {$where_clause}";
+
+	// MSSQL rejects bound parameters for OFFSET/FETCH NEXT row counts — it requires
+	// integer literals. Both $offset and $per_page are whitelist-validated integers
+	// above so inlining them here is safe; no user-supplied string reaches this SQL.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$result_sql = "SELECT [STUDENT_FIRST],[STUDENT_LAST],[YEAR],[IS_TITLE],[MAJOR_1],[MAJOR_2],[ADVISOR_FIRST],[ADVISOR_LAST]
 	               FROM " . SRP_VIEW . "
 	               {$where_clause}
 	               ORDER BY {$order_clause}
-	               OFFSET :offset ROWS FETCH NEXT :per_page ROWS ONLY";
+	               OFFSET {$offset} ROWS FETCH NEXT {$per_page} ROWS ONLY";
 
 	try {
 		$pdo = srp_get_pdo();
@@ -374,9 +378,6 @@ function srp_ajax_search(): void {
 		$count_stmt = $pdo->prepare( $count_sql );
 		$count_stmt->execute( $params );
 		$total = (int) $count_stmt->fetchColumn();
-
-		$params[':offset']   = $offset;
-		$params[':per_page'] = $per_page;
 
 		$stmt = $pdo->prepare( $result_sql );
 		$stmt->execute( $params );

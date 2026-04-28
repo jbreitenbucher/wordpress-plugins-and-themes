@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.5.6
+ * Version:     1.5.7
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -175,7 +175,7 @@ function srp_render_block( array $attributes, string $content ): string {
 				</div>
 
 				<div class="srp-field-group">
-					<label for="<?php echo esc_attr( $uid ); ?>-year">Graduation Year</label>
+					<label for="<?php echo esc_attr( $uid ); ?>-year">Year</label>
 					<select id="<?php echo esc_attr( $uid ); ?>-year" name="year">
 						<option value="">— Any Year —</option>
 					</select>
@@ -199,7 +199,7 @@ function srp_render_block( array $attributes, string $content ): string {
 
 				<?php if ( $show_advisor ) : ?>
 				<div class="srp-field-group">
-					<label for="<?php echo esc_attr( $uid ); ?>-advisor">Advisor Last Name</label>
+					<label for="<?php echo esc_attr( $uid ); ?>-advisor">Advisor</label>
 					<input type="text"
 						id="<?php echo esc_attr( $uid ); ?>-advisor"
 						name="advisor"

@@ -1,0 +1,296 @@
+/* ============================================================
+   SRP Search — Stylesheet
+   College of Wooster — refined academic aesthetic
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+/* ── Custom Properties ───────────────────────────────────── */
+.srp-search-wrap {
+	--srp-black:      #1a1a1a;
+	--srp-gold:       #c8922a;
+	--srp-gold-light: #e8b95a;
+	--srp-cream:      #f9f6f0;
+	--srp-border:     #d4c9b8;
+	--srp-muted:      #6b6258;
+	--srp-red:        #c0392b;
+	--srp-radius:     3px;
+	--srp-shadow:     0 2px 12px rgba(26,26,26,0.08);
+
+	font-family: 'Source Sans 3', sans-serif;
+	color: var(--srp-black);
+	max-width: 960px;
+	margin: 0 auto;
+}
+
+/* ── Form Card ───────────────────────────────────────────── */
+.srp-form {
+	background: var(--srp-cream);
+	border: 1px solid var(--srp-border);
+	border-top: 4px solid var(--srp-gold);
+	border-radius: var(--srp-radius);
+	padding: 2rem 2rem 1.5rem;
+	box-shadow: var(--srp-shadow);
+}
+
+/* ── Field Grid ──────────────────────────────────────────── */
+.srp-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 1.25rem;
+}
+
+.srp-field-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.srp-field-group label {
+	font-family: 'Libre Baskerville', serif;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--srp-muted);
+}
+
+.srp-field-group input,
+.srp-field-group select {
+	font-family: 'Source Sans 3', sans-serif;
+	font-size: 0.95rem;
+	color: var(--srp-black);
+	background: #fff;
+	border: 1px solid var(--srp-border);
+	border-radius: var(--srp-radius);
+	padding: 0.55rem 0.75rem;
+	transition: border-color 0.2s, box-shadow 0.2s;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.srp-field-group input:focus,
+.srp-field-group select:focus {
+	outline: none;
+	border-color: var(--srp-gold);
+	box-shadow: 0 0 0 3px rgba(200,146,42,0.15);
+}
+
+/* ── Form Footer ─────────────────────────────────────────── */
+.srp-form-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-top: 1.5rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid var(--srp-border);
+}
+
+/* ── Validation Message ──────────────────────────────────── */
+.srp-validation-msg {
+	font-size: 0.875rem;
+	min-height: 1.2em;
+	margin: 0;
+	flex: 1;
+}
+
+.srp-validation-msg.srp-error {
+	color: var(--srp-red);
+}
+
+.srp-validation-msg.srp-info {
+	color: var(--srp-muted);
+}
+
+/* ── Submit Button ───────────────────────────────────────── */
+.srp-submit {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	background: var(--srp-gold);
+	color: #fff;
+	font-family: 'Libre Baskerville', serif;
+	font-size: 0.9rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	border: none;
+	border-radius: var(--srp-radius);
+	padding: 0.65rem 1.75rem;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+	white-space: nowrap;
+}
+
+.srp-submit:hover:not(:disabled) {
+	background: #b07d22;
+}
+
+.srp-submit:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.srp-submit:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
+/* Spinner */
+.srp-submit-spinner {
+	display: none;
+	width: 14px;
+	height: 14px;
+	border: 2px solid rgba(255,255,255,0.4);
+	border-top-color: #fff;
+	border-radius: 50%;
+}
+
+.srp-submit.srp-loading .srp-submit-spinner {
+	display: inline-block;
+	animation: srp-spin 0.7s linear infinite;
+}
+
+@keyframes srp-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* ── Results Section ─────────────────────────────────────── */
+.srp-results {
+	margin-top: 2rem;
+}
+
+.srp-results-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 0.75rem;
+}
+
+.srp-results-count {
+	font-family: 'Libre Baskerville', serif;
+	font-size: 0.85rem;
+	font-style: italic;
+	color: var(--srp-muted);
+}
+
+.srp-no-results {
+	font-family: 'Libre Baskerville', serif;
+	font-style: italic;
+	color: var(--srp-muted);
+	text-align: center;
+	padding: 2rem 0;
+}
+
+/* ── Table ───────────────────────────────────────────────── */
+.srp-table-wrap {
+	overflow-x: auto;
+	border: 1px solid var(--srp-border);
+	border-radius: var(--srp-radius);
+	box-shadow: var(--srp-shadow);
+}
+
+.srp-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+	background: #fff;
+}
+
+.srp-table thead {
+	background: var(--srp-black);
+	color: #fff;
+}
+
+.srp-table thead th {
+	font-family: 'Libre Baskerville', serif;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	padding: 0.75rem 1rem;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.srp-table tbody tr {
+	border-bottom: 1px solid var(--srp-border);
+	transition: background 0.15s;
+}
+
+.srp-table tbody tr:last-child {
+	border-bottom: none;
+}
+
+.srp-table tbody tr:hover {
+	background: #fdf8f0;
+}
+
+.srp-table tbody td {
+	padding: 0.75rem 1rem;
+	vertical-align: top;
+	line-height: 1.45;
+	color: var(--srp-black);
+}
+
+/* Title column — a bit wider and slightly muted */
+.srp-table tbody td:nth-child(3) {
+	font-style: italic;
+	color: #3a3530;
+}
+
+/* ── Responsive: stack on mobile ─────────────────────────── */
+@media ( max-width: 640px ) {
+	.srp-form {
+		padding: 1.25rem 1rem 1rem;
+	}
+
+	.srp-fields {
+		grid-template-columns: 1fr;
+	}
+
+	.srp-table thead {
+		display: none;
+	}
+
+	.srp-table tbody tr {
+		display: block;
+		padding: 0.75rem 1rem;
+	}
+
+	.srp-table tbody td {
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.2rem 0;
+		font-size: 0.875rem;
+	}
+
+	.srp-table tbody td::before {
+		content: attr(data-label);
+		font-family: 'Libre Baskerville', serif;
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--srp-muted);
+		min-width: 70px;
+		padding-top: 0.1rem;
+	}
+}
+
+/* ── Block Editor Preview ────────────────────────────────── */
+.srp-editor-preview {
+	background: #f9f6f0;
+	border: 2px dashed #c8922a;
+	border-radius: 3px;
+	padding: 1.25rem 1.5rem;
+}
+
+.srp-editor-label {
+	font-family: 'Source Sans 3', sans-serif;
+	font-size: 0.9rem;
+	color: #6b6258;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}

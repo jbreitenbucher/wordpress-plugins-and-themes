@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "srp/search",
+  "title": "SRP Search",
+  "category": "wbp-content",
+  "icon": "search",
+  "description": "Senior Research Project search — query by student name, year, title, major, or advisor.",
+  "textdomain": "srp-search",
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "editorStyle": "file:./editor.css",
+  "supports": {
+    "html": false,
+    "align": ["wide", "full"]
+  },
+  "attributes": {}
+}

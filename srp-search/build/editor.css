@@ -1,0 +1,10 @@
+/* SRP Search — Editor styles */
+
+.wp-block-srp-search {
+	min-height: 120px;
+}
+
+/* Prevent the AJAX spinner from running in the editor */
+.wp-block-srp-search .srp-submit-spinner {
+	display: none !important;
+}

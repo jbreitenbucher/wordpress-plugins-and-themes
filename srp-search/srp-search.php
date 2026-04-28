@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.5.1
+ * Version:     1.5.2
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4

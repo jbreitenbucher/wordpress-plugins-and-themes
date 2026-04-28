@@ -239,6 +239,17 @@
 	color: #3a3530;
 }
 
+/* First and last columns — extra breathing room away from table edges */
+.srp-table thead th:first-child,
+.srp-table tbody td:first-child {
+	padding-left: 1.5rem;
+}
+
+.srp-table thead th:last-child,
+.srp-table tbody td:last-child {
+	padding-right: 1.5rem;
+}
+
 /* ── Responsive: stack on mobile ─────────────────────────── */
 @media ( max-width: 640px ) {
 	.srp-form {

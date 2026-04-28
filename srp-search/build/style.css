@@ -29,15 +29,18 @@
 	border: 1px solid var(--srp-border);
 	border-top: 4px solid var(--srp-gold);
 	border-radius: var(--srp-radius);
-	padding: 2rem 2rem 1.5rem;
+	padding: 1.5rem 1.75rem 1.25rem;
 	box-shadow: var(--srp-shadow);
 }
 
 /* ── Field Grid ──────────────────────────────────────────── */
+
+/* Desktop (≥ 750px): all five fields on one row, Title wider */
 .srp-fields {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-	gap: 1.25rem;
+	grid-template-columns: 1fr 1fr 2fr 1fr 1fr;
+	gap: 0.875rem;
+	align-items: end;
 }
 
 .srp-field-group {
@@ -250,8 +253,34 @@
 	padding-right: 1.5rem;
 }
 
-/* ── iPad / tablet: condensed table (641px–1024px) ──────────── */
-@media ( min-width: 641px ) and ( max-width: 1024px ) {
+/* ── iPad portrait: 2-row form, condensed table (641px–749px) ── */
+@media ( min-width: 641px ) and ( max-width: 749px ) {
+	.srp-form {
+		padding: 1.5rem 1.5rem 1.25rem;
+	}
+
+	/* Row 1: Last Name | Year | Major — Row 2: Title (wider) | Advisor */
+	.srp-fields {
+		grid-template-columns: 1fr 1fr 1fr;
+		gap: 0.75rem;
+	}
+
+	/* Title spans 2 cols, Advisor takes 1 — achieved via subgrid order */
+	.srp-field-group:nth-child(4) { /* Major stays in row 1 col 3 — no change needed */ }
+
+	/* Title: push to new row, span 2 */
+	.srp-field-group:nth-child(3) {
+		grid-column: 1 / span 2;
+		grid-row: 2;
+	}
+
+	/* Advisor: row 2 col 3 */
+	.srp-field-group:nth-child(5) {
+		grid-column: 3;
+		grid-row: 2;
+	}
+
+	/* Table: condensed padding, Title wraps */
 	.srp-table thead th,
 	.srp-table tbody td {
 		padding-top:    0.6rem;
@@ -260,22 +289,40 @@
 		padding-right:  0.65rem;
 	}
 
-	/* Restore edge breathing room on tablet */
 	.srp-table thead th:first-child,
-	.srp-table tbody td:first-child {
-		padding-left: 1rem;
-	}
+	.srp-table tbody td:first-child { padding-left:  1rem; }
 
 	.srp-table thead th:last-child,
-	.srp-table tbody td:last-child {
-		padding-right: 1rem;
-	}
+	.srp-table tbody td:last-child  { padding-right: 1rem; }
 
-	/* Let Title wrap; keep other columns on one line */
+	.srp-table thead th,
+	.srp-table tbody td { white-space: nowrap; }
+
+	.srp-table thead th:nth-child(3),
+	.srp-table tbody td:nth-child(3) {
+		white-space: normal;
+		min-width: 140px;
+	}
+}
+
+/* ── Desktop tablet: condensed table only (750px–1024px) ────── */
+@media ( min-width: 750px ) and ( max-width: 1024px ) {
 	.srp-table thead th,
 	.srp-table tbody td {
-		white-space: nowrap;
+		padding-top:    0.6rem;
+		padding-bottom: 0.6rem;
+		padding-left:   0.65rem;
+		padding-right:  0.65rem;
 	}
+
+	.srp-table thead th:first-child,
+	.srp-table tbody td:first-child { padding-left:  1rem; }
+
+	.srp-table thead th:last-child,
+	.srp-table tbody td:last-child  { padding-right: 1rem; }
+
+	.srp-table thead th,
+	.srp-table tbody td { white-space: nowrap; }
 
 	.srp-table thead th:nth-child(3),
 	.srp-table tbody td:nth-child(3) {
@@ -290,8 +337,17 @@
 		padding: 1.25rem 1rem 1rem;
 	}
 
+	/* Single column — one field per row, full width, easy to tap */
 	.srp-fields {
 		grid-template-columns: 1fr;
+		gap: 0.75rem;
+	}
+
+	/* Reset any grid placement from tablet breakpoint */
+	.srp-field-group:nth-child(3),
+	.srp-field-group:nth-child(5) {
+		grid-column: auto;
+		grid-row: auto;
 	}
 
 	/* Hide the table wrapper border — cards provide their own */

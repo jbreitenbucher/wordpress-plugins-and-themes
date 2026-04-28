@@ -19,8 +19,9 @@
 
 	font-family: 'Source Sans 3', sans-serif;
 	color: var(--srp-black);
-	max-width: 960px;
-	margin: 0 auto;
+	/* max-width intentionally removed — Twenty Twenty-Five controls
+	   content width at the theme level. Use the block toolbar's
+	   None / Wide / Full Width alignment options to control width. */
 }
 
 /* ── Form Card ───────────────────────────────────────────── */

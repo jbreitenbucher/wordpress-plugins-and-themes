@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.5.4
+ * Version:     1.5.6
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -272,14 +272,10 @@ function srp_ajax_get_years(): void {
 	}
 	try {
 		$pdo  = srp_get_pdo();
-		$stmt = $pdo->query( 'SELECT MIN([YEAR]) AS min_year, MAX([YEAR]) AS max_year FROM ' . SRP_VIEW );
-		$row  = $stmt->fetch();
-		$years = [];
-		if ( $row && $row['min_year'] && $row['max_year'] ) {
-			for ( $y = (int) $row['min_year']; $y <= (int) $row['max_year']; $y++ ) {
-				$years[] = $y;
-			}
-		}
+		// Query distinct years that have actual records — not a generated range.
+		// This ensures no year appears in the dropdown without real data behind it.
+		$stmt  = $pdo->query( 'SELECT DISTINCT [YEAR] FROM ' . SRP_VIEW . ' WHERE [YEAR] IS NOT NULL ORDER BY [YEAR] ASC' );
+		$years = $stmt->fetchAll( PDO::FETCH_COLUMN ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 		wp_send_json_success( [ 'years' => $years ] );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( [ 'message' => srp_error_message( $e, 'Could not load years' ) ], 500 );

@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     1.5.7
+ * Version:     1.6.0
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -66,6 +66,49 @@ add_action( 'admin_notices', function () {
 			esc_html( PHP_SAPI )
 		);
 	}
+
+	// Cache flush confirmation message.
+	if ( isset( $_GET['srp_flushed'] ) && '1' === $_GET['srp_flushed'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		echo '<div class="notice notice-success is-dismissible"><p><strong>SRP Search:</strong> Year and major caches cleared successfully.</p></div>';
+	}
+
+	// Cache management notice — shown to admins only.
+	if ( current_user_can( 'manage_options' ) ) {
+		$flush_url = wp_nonce_url(
+			add_query_arg( 'srp_flush_cache', '1' ),
+			'srp_flush_cache'
+		);
+		printf(
+			'<div class="notice notice-info"><p><strong>SRP Search:</strong> Years cached for 24 hours · Majors cached for 7 days. <a href="%s">Clear cache now</a></p></div>',
+			esc_url( $flush_url )
+		);
+	}
+} );
+
+// ── CACHE FLUSH ACTION ────────────────────────────────────────────────────────
+
+/**
+ * Handles the admin cache flush request.
+ * Nonce-protected, admin-only. Redirects back to the same page after flushing.
+ */
+add_action( 'admin_init', function () {
+	if ( ! isset( $_GET['srp_flush_cache'] ) ) return;
+	if ( ! current_user_can( 'manage_options' ) ) return;
+	check_admin_referer( 'srp_flush_cache' );
+
+	delete_transient( 'srp_years' );
+	delete_transient( 'srp_majors' );
+
+	wp_safe_redirect( add_query_arg( [ 'srp_flush_cache' => false, 'srp_flushed' => '1' ] ) );
+	exit;
+} );
+
+/**
+ * Flush caches on plugin deactivation.
+ */
+register_deactivation_hook( __FILE__, function () {
+	delete_transient( 'srp_years' );
+	delete_transient( 'srp_majors' );
 } );
 
 // ── 2. PDO CONNECTION ─────────────────────────────────────────────────────────
@@ -270,13 +313,21 @@ function srp_ajax_get_years(): void {
 	if ( ! srp_check_config() ) {
 		wp_send_json_error( [ 'message' => 'Database not configured.' ], 500 );
 	}
+
+	// Serve from cache if available — TTL 24 hours.
+	$years = get_transient( 'srp_years' );
+	if ( false !== $years ) {
+		wp_send_json_success( [ 'years' => $years, 'cached' => true ] );
+		return;
+	}
+
 	try {
-		$pdo  = srp_get_pdo();
-		// Query distinct years that have actual records — not a generated range.
-		// This ensures no year appears in the dropdown without real data behind it.
+		$pdo   = srp_get_pdo();
+		// Only years with real records — no generated range.
 		$stmt  = $pdo->query( 'SELECT DISTINCT [YEAR] FROM ' . SRP_VIEW . ' WHERE [YEAR] IS NOT NULL ORDER BY [YEAR] ASC' );
 		$years = $stmt->fetchAll( PDO::FETCH_COLUMN ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
-		wp_send_json_success( [ 'years' => $years ] );
+		set_transient( 'srp_years', $years, DAY_IN_SECONDS );
+		wp_send_json_success( [ 'years' => $years, 'cached' => false ] );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( [ 'message' => srp_error_message( $e, 'Could not load years' ) ], 500 );
 	}
@@ -292,14 +343,24 @@ function srp_ajax_get_majors(): void {
 	if ( ! srp_check_config() ) {
 		wp_send_json_error( [ 'message' => 'Database not configured.' ], 500 );
 	}
+
+	// Serve from cache if available — TTL 7 days.
+	$majors = get_transient( 'srp_majors' );
+	if ( false !== $majors ) {
+		wp_send_json_success( [ 'majors' => $majors, 'cached' => true ] );
+		return;
+	}
+
 	try {
-		$pdo  = srp_get_pdo();
-		$sql  = "SELECT DISTINCT [MAJOR_1] AS major FROM " . SRP_VIEW . " WHERE [MAJOR_1] IS NOT NULL AND [MAJOR_1] <> ''
-                 UNION
-                 SELECT DISTINCT [MAJOR_2] FROM " . SRP_VIEW . " WHERE [MAJOR_2] IS NOT NULL AND [MAJOR_2] <> ''
-                 ORDER BY major ASC";
-		$stmt = $pdo->query( $sql );
-		wp_send_json_success( [ 'majors' => $stmt->fetchAll( PDO::FETCH_COLUMN ) ] ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
+		$pdo    = srp_get_pdo();
+		$sql    = "SELECT DISTINCT [MAJOR_1] AS major FROM " . SRP_VIEW . " WHERE [MAJOR_1] IS NOT NULL AND [MAJOR_1] <> ''
+                  UNION
+                  SELECT DISTINCT [MAJOR_2] FROM " . SRP_VIEW . " WHERE [MAJOR_2] IS NOT NULL AND [MAJOR_2] <> ''
+                  ORDER BY major ASC";
+		$stmt   = $pdo->query( $sql );
+		$majors = $stmt->fetchAll( PDO::FETCH_COLUMN ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
+		set_transient( 'srp_majors', $majors, WEEK_IN_SECONDS );
+		wp_send_json_success( [ 'majors' => $majors, 'cached' => false ] );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( [ 'message' => srp_error_message( $e, 'Could not load majors' ) ], 500 );
 	}

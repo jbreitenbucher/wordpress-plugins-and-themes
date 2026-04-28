@@ -294,3 +294,34 @@
 	align-items: center;
 	gap: 0.5rem;
 }
+
+/* ── Load More ───────────────────────────────────────────── */
+.srp-load-more-wrap {
+	text-align: center;
+	margin-top: 1.5rem;
+}
+
+.srp-load-more {
+	display: inline-block;
+	background: transparent;
+	color: var(--srp-gold);
+	font-family: 'Libre Baskerville', serif;
+	font-size: 0.875rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	border: 2px solid var(--srp-gold);
+	border-radius: var(--srp-radius);
+	padding: 0.6rem 2rem;
+	cursor: pointer;
+	transition: background 0.2s, color 0.2s;
+}
+
+.srp-load-more:hover:not(:disabled) {
+	background: var(--srp-gold);
+	color: #fff;
+}
+
+.srp-load-more:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}

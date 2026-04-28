@@ -14,5 +14,26 @@
     "html": false,
     "align": ["wide", "full"]
   },
-  "attributes": {}
+  "attributes": {
+    "perPage": {
+      "type": "number",
+      "default": 25
+    },
+    "noResultsMessage": {
+      "type": "string",
+      "default": "No projects found matching your search."
+    },
+    "showMajor2": {
+      "type": "boolean",
+      "default": true
+    },
+    "showAdvisor": {
+      "type": "boolean",
+      "default": true
+    },
+    "orderBy": {
+      "type": "string",
+      "default": "year_asc_name_asc"
+    }
+  }
 }

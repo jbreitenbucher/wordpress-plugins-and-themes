@@ -2,35 +2,38 @@
 /**
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
- * Description: Senior Research Project search block for the College of Wooster. Queries an external MSSQL database via PDO with SSL.
- * Version:     1.2.0
+ * Description: Senior Research Project search block for the College of Wooster.
+ * Version:     1.3.0
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * License:     GPL-2.0-or-later
  * Text Domain: srp-search
  *
- * Installation:
- * 1. Add the following constants to wp-config.php:
- *    define( 'SRP_DB_HOST',     'mssql2022.local.wooster.edu' );
- *    define( 'SRP_DB_NAME',     'R18-DataOrch-PROD' );
- *    define( 'SRP_DB_USER',     'srp_readonly' );
- *    define( 'SRP_DB_PASSWORD', 'your_strong_password_here' );
- *    define( 'SRP_DB_ENCRYPT',  true );
- *    define( 'SRP_DEBUG_DB',    true );  // set false or remove in production
- *
- * 2. Upload to /wp-content/plugins/ on the network.
- * 3. Network Admin: install (do NOT network-activate).
- * 4. Site Admin: activate on the target site only.
+ * wp-config.php constants required:
+ *   define( 'SRP_DB_HOST',     'mssql2022.local.wooster.edu' );
+ *   define( 'SRP_DB_NAME',     'R18-DataOrch-PROD' );
+ *   define( 'SRP_DB_USER',     'srp_readonly' );
+ *   define( 'SRP_DB_PASSWORD', 'your_strong_password_here' );
+ *   define( 'SRP_DB_ENCRYPT',  true );
+ *   define( 'SRP_DEBUG_DB',    true );  // remove in production
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'SRP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SRP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SRP_VIEW',       '[IS_TITLES]' );
+
+// ── ORDER BY map ──────────────────────────────────────────────────────────────
+// Maps the block attribute string to a safe SQL ORDER BY clause.
+// Only values present in this map are ever used — no user input reaches ORDER BY.
+const SRP_ORDER_MAP = [
+	'year_asc_name_asc'  => '[YEAR] ASC,  [STUDENT_LAST] ASC',
+	'name_asc_year_asc'  => '[STUDENT_LAST] ASC,  [YEAR] ASC',
+	'year_desc_name_asc' => '[YEAR] DESC, [STUDENT_LAST] ASC',
+	'name_asc'           => '[STUDENT_LAST] ASC',
+];
 
 // ── 1. CONFIG CHECK ───────────────────────────────────────────────────────────
 
@@ -41,11 +44,6 @@ function srp_check_config(): bool {
 	return true;
 }
 
-/**
- * Returns a safe error message.
- * If SRP_DEBUG_DB is true, returns the real exception message.
- * In production (SRP_DEBUG_DB false or absent) returns a generic message.
- */
 function srp_error_message( \Exception $e, string $context ): string {
 	if ( defined( 'SRP_DEBUG_DB' ) && SRP_DEBUG_DB ) {
 		return "[SRP DEBUG] {$context}: " . $e->getMessage();
@@ -55,14 +53,12 @@ function srp_error_message( \Exception $e, string $context ): string {
 
 add_action( 'admin_notices', function () {
 	if ( ! srp_check_config() ) {
-		echo '<div class="notice notice-error"><p><strong>SRP Search:</strong> One or more database constants are missing from <code>wp-config.php</code>. Required: <code>SRP_DB_HOST</code>, <code>SRP_DB_NAME</code>, <code>SRP_DB_USER</code>, <code>SRP_DB_PASSWORD</code>.</p></div>';
+		echo '<div class="notice notice-error"><p><strong>SRP Search:</strong> Database constants missing from <code>wp-config.php</code>.</p></div>';
 	}
-
-	// Show driver check in admin when debug is on.
 	if ( defined( 'SRP_DEBUG_DB' ) && SRP_DEBUG_DB ) {
-		$pdo_loaded    = extension_loaded( 'pdo_sqlsrv' ) ? '✅ loaded' : '❌ NOT loaded';
-		$sqlsrv_loaded = extension_loaded( 'sqlsrv' )     ? '✅ loaded' : '❌ NOT loaded';
-		echo "<div class='notice notice-info'><p><strong>SRP Debug:</strong> pdo_sqlsrv: {$pdo_loaded} &nbsp;|&nbsp; sqlsrv: {$sqlsrv_loaded} &nbsp;|&nbsp; PHP: " . PHP_VERSION . " &nbsp;|&nbsp; SAPI: " . PHP_SAPI . "</p></div>";
+		$pdo    = extension_loaded( 'pdo_sqlsrv' ) ? '✅' : '❌';
+		$sqlsrv = extension_loaded( 'sqlsrv' )     ? '✅' : '❌';
+		echo "<div class='notice notice-info'><p><strong>SRP Debug:</strong> pdo_sqlsrv {$pdo} | sqlsrv {$sqlsrv} | PHP " . PHP_VERSION . " | " . PHP_SAPI . "</p></div>";
 	}
 } );
 
@@ -95,18 +91,10 @@ add_action( 'init', function () {
 function srp_filter_block_categories( array $categories, $post ): array {
 	$target      = [ 'slug' => 'wbp-content', 'title' => __( 'Wooster Blocks', 'srp-search' ), 'icon' => null ];
 	$found_index = null;
-
 	foreach ( $categories as $i => $cat ) {
-		if ( isset( $cat['slug'] ) && 'wbp-content' === $cat['slug'] ) {
-			$found_index = $i;
-			break;
-		}
+		if ( isset( $cat['slug'] ) && 'wbp-content' === $cat['slug'] ) { $found_index = $i; break; }
 	}
-
-	if ( null !== $found_index ) {
-		array_splice( $categories, $found_index, 1 );
-	}
-
+	if ( null !== $found_index ) array_splice( $categories, $found_index, 1 );
 	array_unshift( $categories, $target );
 	return $categories;
 }
@@ -122,65 +110,94 @@ function srp_localize( string $handle ): void {
 	] );
 }
 
-// Front end.
 add_action( 'wp_enqueue_scripts', function () {
-	wp_enqueue_script(
-		'srp-search-frontend',
-		SRP_PLUGIN_URL . 'build/frontend.js',
-		[ 'jquery' ],
-		filemtime( SRP_PLUGIN_DIR . 'build/frontend.js' ),
-		true
-	);
+	wp_enqueue_script( 'srp-search-frontend', SRP_PLUGIN_URL . 'build/frontend.js',
+		[ 'jquery' ], filemtime( SRP_PLUGIN_DIR . 'build/frontend.js' ), true );
 	srp_localize( 'srp-search-frontend' );
 } );
 
-// Block editor — frontend.js bound after SSR via MutationObserver (see frontend.js).
 add_action( 'enqueue_block_editor_assets', function () {
-	wp_enqueue_script(
-		'srp-search-frontend-editor',
-		SRP_PLUGIN_URL . 'build/frontend.js',
-		[ 'jquery' ],
-		filemtime( SRP_PLUGIN_DIR . 'build/frontend.js' ),
-		true
-	);
+	wp_enqueue_script( 'srp-search-frontend-editor', SRP_PLUGIN_URL . 'build/frontend.js',
+		[ 'jquery' ], filemtime( SRP_PLUGIN_DIR . 'build/frontend.js' ), true );
 	srp_localize( 'srp-search-frontend-editor' );
 } );
 
 // ── 6. RENDER CALLBACK ────────────────────────────────────────────────────────
 
 function srp_render_block( array $attributes, string $content ): string {
-	// Unique ID per block instance so multiple blocks on one page don't clash.
 	static $instance = 0;
 	$instance++;
 	$uid = 'srp-' . $instance;
 
+	// Sanitize attributes with safe defaults.
+	$per_page          = in_array( (int) ( $attributes['perPage'] ?? 25 ), [ 25, 50, 100 ], true )
+	                     ? (int) $attributes['perPage'] : 25;
+	$no_results_msg    = esc_html( $attributes['noResultsMessage']
+	                     ?? 'No projects found matching your search.' );
+	$show_major2       = (bool) ( $attributes['showMajor2']  ?? true );
+	$show_advisor      = (bool) ( $attributes['showAdvisor'] ?? true );
+	$order_by_key      = $attributes['orderBy'] ?? 'year_asc_name_asc';
+	if ( ! array_key_exists( $order_by_key, SRP_ORDER_MAP ) ) {
+		$order_by_key = 'year_asc_name_asc';
+	}
+
 	ob_start();
 	?>
-	<div class="srp-search-wrap" id="<?php echo esc_attr( $uid ); ?>" data-srp-uid="<?php echo esc_attr( $uid ); ?>">
+	<div class="srp-search-wrap"
+		id="<?php echo esc_attr( $uid ); ?>"
+		data-srp-uid="<?php echo esc_attr( $uid ); ?>"
+		data-srp-per-page="<?php echo esc_attr( $per_page ); ?>"
+		data-srp-no-results="<?php echo esc_attr( $no_results_msg ); ?>"
+		data-srp-show-major2="<?php echo $show_major2  ? '1' : '0'; ?>"
+		data-srp-show-advisor="<?php echo $show_advisor ? '1' : '0'; ?>"
+		data-srp-order-by="<?php echo esc_attr( $order_by_key ); ?>">
+
 		<form class="srp-form" novalidate>
 			<div class="srp-fields">
+
 				<div class="srp-field-group">
 					<label for="<?php echo esc_attr( $uid ); ?>-last-name">Last Name</label>
-					<input type="text" id="<?php echo esc_attr( $uid ); ?>-last-name" name="last_name" placeholder="e.g. Smith" autocomplete="off" />
+					<input type="text"
+						id="<?php echo esc_attr( $uid ); ?>-last-name"
+						name="last_name"
+						placeholder="e.g. Smith"
+						autocomplete="off" />
 				</div>
+
 				<div class="srp-field-group">
 					<label for="<?php echo esc_attr( $uid ); ?>-year">Graduation Year</label>
-					<input type="number" id="<?php echo esc_attr( $uid ); ?>-year" name="year" placeholder="e.g. 2023" min="1900" max="2100" />
+					<select id="<?php echo esc_attr( $uid ); ?>-year" name="year">
+						<option value="">— Any Year —</option>
+					</select>
 				</div>
+
 				<div class="srp-field-group">
 					<label for="<?php echo esc_attr( $uid ); ?>-title">Title Contains</label>
-					<input type="text" id="<?php echo esc_attr( $uid ); ?>-title" name="title" placeholder="e.g. climate" autocomplete="off" />
+					<input type="text"
+						id="<?php echo esc_attr( $uid ); ?>-title"
+						name="title"
+						placeholder="e.g. climate"
+						autocomplete="off" />
 				</div>
+
 				<div class="srp-field-group">
 					<label for="<?php echo esc_attr( $uid ); ?>-major">Major</label>
 					<select id="<?php echo esc_attr( $uid ); ?>-major" name="major">
 						<option value="">— Any Major —</option>
 					</select>
 				</div>
+
+				<?php if ( $show_advisor ) : ?>
 				<div class="srp-field-group">
 					<label for="<?php echo esc_attr( $uid ); ?>-advisor">Advisor Last Name</label>
-					<input type="text" id="<?php echo esc_attr( $uid ); ?>-advisor" name="advisor" placeholder="e.g. Jones" autocomplete="off" />
+					<input type="text"
+						id="<?php echo esc_attr( $uid ); ?>-advisor"
+						name="advisor"
+						placeholder="e.g. Jones"
+						autocomplete="off" />
 				</div>
+				<?php endif; ?>
+
 			</div>
 			<div class="srp-form-footer">
 				<p class="srp-validation-msg" role="alert" aria-live="polite"></p>
@@ -190,20 +207,25 @@ function srp_render_block( array $attributes, string $content ): string {
 				</button>
 			</div>
 		</form>
+
 		<div class="srp-results" aria-live="polite"></div>
+
+		<div class="srp-load-more-wrap" style="display:none;">
+			<button class="srp-load-more" type="button">Load More</button>
+		</div>
+
 	</div>
 	<?php
 	return ob_get_clean();
 }
 
-// ── 7. AJAX: DRIVER & CONNECTION DIAGNOSTIC ───────────────────────────────────
+// ── 7. AJAX: DIAGNOSTIC ───────────────────────────────────────────────────────
 
 add_action( 'wp_ajax_srp_check',        'srp_ajax_check' );
 add_action( 'wp_ajax_nopriv_srp_check', 'srp_ajax_check' );
 
 function srp_ajax_check(): void {
 	check_ajax_referer( 'srp_search_nonce', 'nonce' );
-
 	$report = [
 		'php_version'    => PHP_VERSION,
 		'php_sapi'       => PHP_SAPI,
@@ -215,35 +237,55 @@ function srp_ajax_check(): void {
 		'query_test'     => false,
 		'query_err'      => '',
 	];
-
 	if ( $report['pdo_sqlsrv'] && $report['config_ok'] ) {
 		try {
-			$pdo                 = srp_get_pdo();
+			$pdo                  = srp_get_pdo();
 			$report['connection'] = true;
-
-			// Try a minimal query against the view.
-			$stmt                  = $pdo->query( 'SELECT TOP 1 [STUDENT_LAST] FROM ' . SRP_VIEW );
-			$report['query_test']  = ( $stmt !== false );
+			$stmt                 = $pdo->query( 'SELECT TOP 1 [STUDENT_LAST] FROM ' . SRP_VIEW );
+			$report['query_test'] = ( $stmt !== false );
 		} catch ( \Exception $e ) {
 			$report['connection_err'] = $e->getMessage();
 		}
 	}
-
 	wp_send_json_success( $report );
 }
 
-// ── 8. AJAX: LOAD MAJORS ──────────────────────────────────────────────────────
+// ── 8. AJAX: LOAD YEARS ───────────────────────────────────────────────────────
+
+add_action( 'wp_ajax_srp_get_years',        'srp_ajax_get_years' );
+add_action( 'wp_ajax_nopriv_srp_get_years', 'srp_ajax_get_years' );
+
+function srp_ajax_get_years(): void {
+	check_ajax_referer( 'srp_search_nonce', 'nonce' );
+	if ( ! srp_check_config() ) {
+		wp_send_json_error( [ 'message' => 'Database not configured.' ], 500 );
+	}
+	try {
+		$pdo  = srp_get_pdo();
+		$stmt = $pdo->query( 'SELECT MIN([YEAR]) AS min_year, MAX([YEAR]) AS max_year FROM ' . SRP_VIEW );
+		$row  = $stmt->fetch();
+		$years = [];
+		if ( $row && $row['min_year'] && $row['max_year'] ) {
+			for ( $y = (int) $row['min_year']; $y <= (int) $row['max_year']; $y++ ) {
+				$years[] = $y;
+			}
+		}
+		wp_send_json_success( [ 'years' => $years ] );
+	} catch ( \Exception $e ) {
+		wp_send_json_error( [ 'message' => srp_error_message( $e, 'Could not load years' ) ], 500 );
+	}
+}
+
+// ── 9. AJAX: LOAD MAJORS ──────────────────────────────────────────────────────
 
 add_action( 'wp_ajax_srp_get_majors',        'srp_ajax_get_majors' );
 add_action( 'wp_ajax_nopriv_srp_get_majors', 'srp_ajax_get_majors' );
 
 function srp_ajax_get_majors(): void {
 	check_ajax_referer( 'srp_search_nonce', 'nonce' );
-
 	if ( ! srp_check_config() ) {
-		wp_send_json_error( [ 'message' => 'Database not configured — check wp-config.php constants.' ], 500 );
+		wp_send_json_error( [ 'message' => 'Database not configured.' ], 500 );
 	}
-
 	try {
 		$pdo  = srp_get_pdo();
 		$sql  = "SELECT DISTINCT [MAJOR_1] AS major FROM " . SRP_VIEW . " WHERE [MAJOR_1] IS NOT NULL AND [MAJOR_1] <> ''
@@ -257,7 +299,7 @@ function srp_ajax_get_majors(): void {
 	}
 }
 
-// ── 9. AJAX: SEARCH ───────────────────────────────────────────────────────────
+// ── 10. AJAX: SEARCH ──────────────────────────────────────────────────────────
 
 add_action( 'wp_ajax_srp_search',        'srp_ajax_search' );
 add_action( 'wp_ajax_nopriv_srp_search', 'srp_ajax_search' );
@@ -266,21 +308,34 @@ function srp_ajax_search(): void {
 	check_ajax_referer( 'srp_search_nonce', 'nonce' );
 
 	if ( ! srp_check_config() ) {
-		wp_send_json_error( [ 'message' => 'Database not configured — check wp-config.php constants.' ], 500 );
+		wp_send_json_error( [ 'message' => 'Database not configured.' ], 500 );
 	}
 
+	// Sanitize inputs.
 	$last_name = sanitize_text_field( wp_unslash( $_POST['last_name'] ?? '' ) );
 	$year      = sanitize_text_field( wp_unslash( $_POST['year']      ?? '' ) );
 	$title     = sanitize_text_field( wp_unslash( $_POST['title']     ?? '' ) );
 	$major     = sanitize_text_field( wp_unslash( $_POST['major']     ?? '' ) );
 	$advisor   = sanitize_text_field( wp_unslash( $_POST['advisor']   ?? '' ) );
 
+	// Pagination.
+	$per_page = in_array( (int) ( $_POST['per_page'] ?? 25 ), [ 25, 50, 100 ], true )
+	            ? (int) $_POST['per_page'] : 25;
+	$offset   = max( 0, (int) ( $_POST['offset'] ?? 0 ) );
+
+	// Order — validate against whitelist map; never trust raw input.
+	$order_by_key = sanitize_text_field( wp_unslash( $_POST['order_by'] ?? 'year_asc_name_asc' ) );
+	if ( ! array_key_exists( $order_by_key, SRP_ORDER_MAP ) ) {
+		$order_by_key = 'year_asc_name_asc';
+	}
+	$order_clause = SRP_ORDER_MAP[ $order_by_key ];
+
 	if ( $last_name === '' && $year === '' && $title === '' && $major === '' && $advisor === '' ) {
 		wp_send_json_error( [ 'message' => 'Please enter at least one search field.' ], 422 );
 	}
 
 	if ( $year !== '' && ! ctype_digit( $year ) ) {
-		wp_send_json_error( [ 'message' => 'Graduation year must be a number.' ], 422 );
+		wp_send_json_error( [ 'message' => 'Please select a valid graduation year.' ], 422 );
 	}
 
 	$where  = [];
@@ -292,16 +347,39 @@ function srp_ajax_search(): void {
 	if ( $major     !== '' ) { $where[] = '([MAJOR_1] = :major OR [MAJOR_2] = :major2)'; $params[':major'] = $major; $params[':major2'] = $major; }
 	if ( $advisor   !== '' ) { $where[] = '[ADVISOR_LAST] LIKE :advisor';    $params[':advisor']   = '%' . $advisor . '%'; }
 
-	$sql = "SELECT [STUDENT_FIRST],[STUDENT_LAST],[YEAR],[IS_TITLE],[MAJOR_1],[MAJOR_2],[ADVISOR_FIRST],[ADVISOR_LAST]
-	        FROM " . SRP_VIEW . " WHERE " . implode( ' AND ', $where ) . "
-	        ORDER BY [YEAR] ASC, [STUDENT_LAST] ASC";
+	$where_clause = 'WHERE ' . implode( ' AND ', $where );
+
+	// Total count for Load More visibility.
+	$count_sql  = "SELECT COUNT(*) FROM " . SRP_VIEW . " {$where_clause}";
+	// Paginated results.
+	$result_sql = "SELECT [STUDENT_FIRST],[STUDENT_LAST],[YEAR],[IS_TITLE],[MAJOR_1],[MAJOR_2],[ADVISOR_FIRST],[ADVISOR_LAST]
+	               FROM " . SRP_VIEW . "
+	               {$where_clause}
+	               ORDER BY {$order_clause}
+	               OFFSET :offset ROWS FETCH NEXT :per_page ROWS ONLY";
 
 	try {
-		$pdo  = srp_get_pdo();
-		$stmt = $pdo->prepare( $sql );
+		$pdo = srp_get_pdo();
+
+		$count_stmt = $pdo->prepare( $count_sql );
+		$count_stmt->execute( $params );
+		$total = (int) $count_stmt->fetchColumn();
+
+		$params[':offset']   = $offset;
+		$params[':per_page'] = $per_page;
+
+		$stmt = $pdo->prepare( $result_sql );
 		$stmt->execute( $params );
 		$rows = $stmt->fetchAll();
-		wp_send_json_success( [ 'results' => $rows, 'count' => count( $rows ) ] );
+
+		wp_send_json_success( [
+			'results'  => $rows,
+			'count'    => count( $rows ),
+			'total'    => $total,
+			'offset'   => $offset,
+			'per_page' => $per_page,
+			'has_more' => ( $offset + count( $rows ) ) < $total,
+		] );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( [ 'message' => srp_error_message( $e, 'Search failed' ) ], 500 );
 	}

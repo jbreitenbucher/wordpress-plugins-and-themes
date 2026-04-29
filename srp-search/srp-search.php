@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     2.1.2
+ * Version:     2.1.3
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -233,10 +233,11 @@ function srp_render_block( array $attributes, string $content ): string {
 					<label for="<?php echo esc_attr( $uid ); ?>-title">Title Contains</label>
 					<input type="text"
 						id="<?php echo esc_attr( $uid ); ?>-title"
-						name="title" placeholder="e.g. climate"
+						name="title" placeholder="e.g. climate change"
 						autocomplete="off"
 						maxlength="<?php echo esc_attr( SRP_MAX_INPUT_LENGTH ); ?>"
 						value="<?php echo esc_attr( $url_title ); ?>" />
+					<span class="srp-field-hint">Multiple words all required</span>
 				</div>
 
 				<div class="srp-field-group">
@@ -427,7 +428,16 @@ function srp_ajax_search(): void {
 	$where = []; $params = [];
 	if ( $last_name !== '' ) { $where[] = '([ATTENDED_AS_LAST] LIKE :last_name OR [STUDENT_LAST] LIKE :last_name2)'; $params[':last_name'] = '%' . $last_name . '%'; $params[':last_name2'] = '%' . $last_name . '%'; }
 	if ( $year      !== '' ) { $where[] = '[YEAR] = :year';                                      $params[':year']      = (int) $year; }
-	if ( $title     !== '' ) { $where[] = '[IS_TITLE] LIKE :title';                              $params[':title']     = '%' . $title . '%'; }
+	if ( $title !== '' ) {
+		// Split on whitespace — each word must appear in the title (AND logic).
+		// "dog climate" matches titles containing both "dog" AND "climate" in any order.
+		$words = preg_split( '/\s+/', trim( $title ), -1, PREG_SPLIT_NO_EMPTY );
+		foreach ( $words as $i => $word ) {
+			$key            = ':title_word_' . $i;
+			$where[]        = '[IS_TITLE] LIKE ' . $key;
+			$params[ $key ] = '%' . $word . '%';
+		}
+	}
 	if ( $major     !== '' ) { $where[] = '([MAJOR_1_DESC] = :major OR [MAJOR_2_DESC] = :major2)'; $params[':major'] = $major; $params[':major2'] = $major; }
 	if ( $advisor   !== '' ) { $where[] = '[ADVISOR_LAST] LIKE :advisor';                        $params[':advisor']   = '%' . $advisor . '%'; }
 

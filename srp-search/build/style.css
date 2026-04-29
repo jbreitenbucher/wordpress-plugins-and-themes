@@ -627,3 +627,13 @@
 		padding-bottom: 6pt;
 	}
 }
+
+/* ── Field hint text ─────────────────────────────────────────── */
+.srp-field-hint {
+	font-family: 'Source Sans 3', sans-serif;
+	font-size: 0.72rem;
+	color: var(--srp-muted);
+	font-style: italic;
+	margin-top: 0.2rem;
+	display: block;
+}

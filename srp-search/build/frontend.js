@@ -277,7 +277,16 @@
 		function buildRows( rows ) {
 			let h = '';
 			rows.forEach( function ( row ) {
-				const student  = escHtml( ( row.STUDENT_FIRST || '' ) + ' ' + ( row.ATTENDED_AS_LAST || '' ) );
+				// Display: "First AttendedLast" if names match,
+				// or "First AttendedLast (StudentLast)" if they differ.
+				const firstName    = ( row.STUDENT_FIRST    || '' ).trim();
+				const attendedLast = ( row.ATTENDED_AS_LAST || '' ).trim();
+				const studentLast  = ( row.STUDENT_LAST     || '' ).trim();
+				const namesDiffer  = attendedLast.toLowerCase() !== studentLast.toLowerCase();
+				const studentRaw   = namesDiffer && studentLast
+					? firstName + ' ' + attendedLast + ' (' + studentLast + ')'
+					: firstName + ' ' + attendedLast;
+				const student      = escHtml( studentRaw.trim() );
 				const year     = escHtml( row.YEAR );
 				const title    = escHtml( row.IS_TITLE );
 				const major1   = escHtml( row.MAJOR_1_DESC || '—' );

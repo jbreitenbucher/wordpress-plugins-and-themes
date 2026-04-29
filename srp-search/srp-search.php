@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     2.1.1
+ * Version:     2.1.2
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -425,7 +425,7 @@ function srp_ajax_search(): void {
 	}
 
 	$where = []; $params = [];
-	if ( $last_name !== '' ) { $where[] = '[ATTENDED_AS_LAST] LIKE :last_name';  $params[':last_name'] = '%' . $last_name . '%'; }
+	if ( $last_name !== '' ) { $where[] = '([ATTENDED_AS_LAST] LIKE :last_name OR [STUDENT_LAST] LIKE :last_name2)'; $params[':last_name'] = '%' . $last_name . '%'; $params[':last_name2'] = '%' . $last_name . '%'; }
 	if ( $year      !== '' ) { $where[] = '[YEAR] = :year';                                      $params[':year']      = (int) $year; }
 	if ( $title     !== '' ) { $where[] = '[IS_TITLE] LIKE :title';                              $params[':title']     = '%' . $title . '%'; }
 	if ( $major     !== '' ) { $where[] = '([MAJOR_1_DESC] = :major OR [MAJOR_2_DESC] = :major2)'; $params[':major'] = $major; $params[':major2'] = $major; }
@@ -435,7 +435,7 @@ function srp_ajax_search(): void {
 	$count_sql    = "SELECT COUNT(*) FROM " . SRP_VIEW . " {$where_clause}";
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	$result_sql = "SELECT [STUDENT_FIRST],[ATTENDED_AS_LAST],[YEAR],[IS_TITLE],[MAJOR_1_DESC],[MAJOR_2_DESC],[ADVISOR_FIRST],[ADVISOR_LAST]
+	$result_sql = "SELECT [STUDENT_FIRST],[STUDENT_LAST],[ATTENDED_AS_LAST],[YEAR],[IS_TITLE],[MAJOR_1_DESC],[MAJOR_2_DESC],[ADVISOR_FIRST],[ADVISOR_LAST]
 	               FROM " . SRP_VIEW . " {$where_clause}
 	               ORDER BY {$order_clause}
 	               OFFSET {$offset} ROWS FETCH NEXT {$per_page} ROWS ONLY";

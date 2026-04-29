@@ -1,49 +1,72 @@
 # SRP Search — WordPress Plugin
 **College of Wooster — Senior Research Project Search**
+Version 2.0.0
 
-A Gutenberg block that allows visitors to search the IS_TITLES view in the external MSSQL database and display matching projects in a responsive table.
+A Gutenberg block that allows visitors to search the IS_TITLES view in an external MSSQL database and display matching projects in a responsive table. Supports multi-field combinable search, pagination, bookmarkable URLs, and full mobile card layout.
 
 ---
 
 ## Requirements
 
 - WordPress Multisite (network install, site activation)
-- PHP 7.4+ with the **sqlsrv** PDO driver installed on the server
-- The `sqlsrv` PHP extension: https://docs.microsoft.com/en-us/sql/connect/php/installation-tutorial-linux-mac
-- MSSQL database accessible from the WordPress server
+- PHP 8.0+ with the **sqlsrv** and **pdo_sqlsrv** extensions installed for the **web server** PHP SAPI (not just CLI)
+- Microsoft ODBC Driver 18 for SQL Server
+- OpenSSL 1.1 or 3.0 (release build — not a dev build) on the web server
+- MSSQL database accessible from the WordPress server on port 1433
 
 ---
 
-## Installation
+## Server Setup
 
-### Step 1 — Install the PHP sqlsrv driver (if not already installed)
+### Step 1 — Install Microsoft ODBC Driver 18 (SUSE Linux)
 
-The server running WordPress needs Microsoft's PHP driver for SQL Server.
-
-On Ubuntu/Debian:
 ```bash
-# Install Microsoft ODBC driver first, then:
+sudo zypper ar https://packages.microsoft.com/config/sles/15/prod.repo
+sudo zypper --gpg-auto-import-keys refresh
+sudo zypper install msodbcsql18 unixODBC-devel
+```
+
+### Step 2 — Install PHP sqlsrv extensions
+
+```bash
 sudo pecl install sqlsrv pdo_sqlsrv
 ```
 
-Verify with: `php -m | grep sqlsrv`
-
-### Step 2 — Add constants to wp-config.php
-
-Open `wp-config.php` on the WordPress server and add these lines **before** the `/* That's all, stop editing! */` line:
-
-```php
-// SRP Search — External MSSQL Database
-define( 'SRP_DB_HOST',     'mssql2022.local.wooster.edu' );
-define( 'SRP_DB_NAME',     'R18-DataOrch-PROD' );
-define( 'SRP_DB_USER',     'srp_readonly' );        // read-only DB user
-define( 'SRP_DB_PASSWORD', 'YOUR_PASSWORD_HERE' );
-define( 'SRP_DB_ENCRYPT',  true );                  // set false only if SSL unavailable
+If PECL fails, install PHP development headers first:
+```bash
+sudo zypper install php-devel
 ```
 
-### Step 3 — Create a read-only database user
+### Step 3 — Enable extensions for the web server PHP SAPI
 
-On the MSSQL server, create a user with SELECT-only access to the view:
+Critical: PHP CLI and Apache mod_php use separate php.ini files. The extensions must be enabled in the web server ini, not just CLI.
+
+```bash
+# Find the correct ini file
+php -i | grep "Loaded Configuration File"
+
+# Add extension lines
+echo "extension=sqlsrv.so"     >> /path/to/php.ini
+echo "extension=pdo_sqlsrv.so" >> /path/to/php.ini
+sudo systemctl restart apache2
+```
+
+### Step 4 — Install the issuer certificate
+
+```bash
+# Convert .cer to .pem if needed
+openssl x509 -inform DER -in issuer.cer -out mssql-ca.pem
+
+# Install on the WordPress server
+sudo mkdir -p /etc/ssl/wooster
+sudo cp mssql-ca.pem /etc/ssl/wooster/mssql-ca.pem
+sudo chmod 644 /etc/ssl/wooster/mssql-ca.pem
+sudo cp mssql-ca.pem /etc/pki/trust/anchors/
+sudo update-ca-certificates
+sudo systemctl restart apache2
+```
+
+### Step 5 — Create a read-only database user
 
 ```sql
 CREATE LOGIN srp_readonly WITH PASSWORD = 'YourStrongPasswordHere';
@@ -52,61 +75,123 @@ CREATE USER srp_readonly FOR LOGIN srp_readonly;
 GRANT SELECT ON [dbo].[IS_TITLES] TO srp_readonly;
 ```
 
-### Step 4 — Upload the plugin
+---
 
-Upload the entire `srp-search` folder to:
+## Plugin Installation
+
+### Step 1 — Add constants to wp-config.php
+
+```php
+define( 'SRP_DB_HOST',     'mssql2022.local.wooster.edu' );
+define( 'SRP_DB_NAME',     'R18-DataOrch-PROD' );
+define( 'SRP_DB_USER',     'srp_readonly' );
+define( 'SRP_DB_PASSWORD', 'YOUR_PASSWORD_HERE' );
+define( 'SRP_DB_ENCRYPT',  true );
+// define( 'SRP_DEBUG_DB', true ); // debugging only — remove in production
 ```
-/wp-content/plugins/srp-search/
-```
 
-### Step 5 — Network Admin: install (do NOT network-activate)
+### Step 2 — Upload the plugin
 
-In the Network Admin dashboard:
-- Go to **Plugins → Installed Plugins**
-- Find **SRP Search** — it will appear but is not activated network-wide
-- Do **not** click Network Activate
+Upload the srp-search folder to /wp-content/plugins/ on the network server.
 
-### Step 6 — Site Admin: activate on the target site
+### Step 3 — Network Admin: do NOT network-activate
 
-In the target site's admin dashboard:
-- Go to **Plugins → Installed Plugins**
-- Activate **SRP Search**
+In Network Admin go to Plugins and leave the plugin installed but not network-activated.
+
+### Step 4 — Site Admin: activate on the target site only
+
+In the target site admin go to Plugins and activate SRP Search on that site only.
 
 ---
 
 ## Usage
 
 1. Edit any page or post on the target site
-2. Add the **SRP Search** block (found under Widgets)
-3. Publish — the search form will appear on the front end
-4. Visitors can search by any combination of: Last Name, Year, Title keyword, Major, Advisor
+2. Add the SRP Search block (found under Wooster Blocks in the block inserter)
+3. Use the block toolbar to set alignment (Wide recommended)
+4. Use the Inspector Panel to configure results per page, ordering, no-results message, and column visibility
+5. Publish
+
+### Search Fields
+
+All fields are optional and combinable. At least one must be filled.
+
+- Last Name: partial match
+- Year: exact match, dropdown from DB
+- Title Contains: partial match
+- Major: exact match, dropdown from DB
+- Advisor: partial match on last name
+
+### Bookmarkable Searches
+
+Search params are pushed to the URL (e.g. ?srp_last_name=smith&srp_year=2023). These URLs can be shared or bookmarked and the search re-runs automatically on page load.
 
 ---
 
-## Security Notes
+## Cache Management
 
-- Credentials are stored in `wp-config.php`, never in the plugin or database
-- The plugin uses a PDO prepared statement for all queries — SQL injection is not possible
-- The DB user has SELECT-only access to one view
-- The connection uses TLS encryption (`Encrypt=yes`) by default
-- All AJAX requests are protected by WordPress nonces
-- Input is sanitized via `sanitize_text_field()` before use
+| Data | TTL |
+|---|---|
+| Years | 24 hours |
+| Majors | 7 days |
+
+Any WordPress admin page shows an SRP Search notice with a Clear cache now link. Click it after new projects are added to the database. Cache also clears on plugin deactivation.
+
+---
+
+## Debugging
+
+Add to wp-config.php:
+```php
+define( 'SRP_DEBUG_DB', true );
+```
+
+Run from browser console on any page with the block:
+```javascript
+srp_run_diagnostic()
+```
+
+For production error logging without exposing errors to visitors:
+```php
+define( 'WP_DEBUG',         true );
+define( 'WP_DEBUG_LOG',     true );
+define( 'WP_DEBUG_DISPLAY', false );
+```
+
+Errors log to wp-content/debug.log.
+
+---
+
+## Security
+
+- Credentials in wp-config.php only
+- TLS encrypted DB connection with certificate verification
+- Read-only DB user, SELECT on one view only
+- Prepared statements on all queries
+- Input length capped at 100 characters server-side
+- Rate limiting: 30 search requests per IP per minute
+- Nonce protection on all AJAX endpoints
+- Stampede protection on cache population
+
+---
+
+## Responsive Layout
+
+| Breakpoint | Form | Results |
+|---|---|---|
+| >= 750px | Single row | Full table |
+| 641-749px | Two-row grid | Condensed table |
+| <= 640px | Single column | Cards |
+
+Print view hides the form and shows a clean full-width table with a College of Wooster header.
 
 ---
 
 ## Troubleshooting
 
-**"Database not configured" error**
-→ Check that all four `SRP_DB_*` constants are defined in `wp-config.php`
-
-**"Search failed" error**
-→ Confirm the PHP `sqlsrv` extension is installed: `php -m | grep sqlsrv`
-→ Confirm the WordPress server can reach `mssql2022.local.wooster.edu` on port 1433
-→ Confirm the `srp_readonly` user has SELECT access on `[IS_TITLES]`
-
-**Major dropdown is empty**
-→ Confirm `MAJOR_1` and `MAJOR_2` columns have data in the view
-→ Check browser console for AJAX errors
-
-**SSL/TLS connection errors**
-→ Temporarily set `define( 'SRP_DB_ENCRYPT', false )` to test without SSL, then resolve the certificate issue
+- Database not configured: check wp-config.php constants
+- Empty dropdowns: run srp_run_diagnostic() — check pdo_sqlsrv loaded in web SAPI
+- Search unavailable: DB unreachable — check debug log, verify port 1433 access
+- OpenSSL errors: confirm release build of OpenSSL 1.1 or 3.0 is installed
+- pdo_sqlsrv in CLI but not web: add extension lines to web server php.ini and restart Apache
+- Too many requests: rate limit (30/min) — resets after 60 seconds automatically

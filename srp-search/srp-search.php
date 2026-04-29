@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     2.1.0
+ * Version:     2.1.1
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -335,7 +335,7 @@ function srp_ajax_get_years(): void {
 	set_transient( 'srp_years_lock', 1, 10 );
 	try {
 		$pdo   = srp_get_pdo();
-		$stmt  = $pdo->query( 'SELECT DISTINCT [YEAR] FROM ' . SRP_VIEW . ' WHERE [YEAR] IS NOT NULL ORDER BY [YEAR] ASC' );
+		$stmt  = $pdo->query( 'SELECT DISTINCT [YEAR] FROM ' . SRP_VIEW . ' WHERE [YEAR] IS NOT NULL ORDER BY [YEAR] DESC' );
 		$years = $stmt->fetchAll( PDO::FETCH_COLUMN ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
 		set_transient( 'srp_years', $years, DAY_IN_SECONDS );
 		delete_transient( 'srp_years_lock' );

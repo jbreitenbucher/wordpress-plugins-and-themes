@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     2.0.0
+ * Version:     2.0.1
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -184,11 +184,16 @@ function srp_render_block( array $attributes, string $content ): string {
 	if ( ! array_key_exists( $order_by_key, SRP_ORDER_MAP ) ) $order_by_key = 'year_asc_name_asc';
 
 	// URL state — pre-populates fields and auto-runs search for bookmarkable URLs.
+	// These $_GET reads have no nonce because they are read-only: values are sanitized
+	// and used only to pre-fill form fields. No data is written and no privileged action
+	// is taken. The nonce check occurs in the AJAX handler when the search actually runs.
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended
 	$url_last_name = sanitize_text_field( wp_unslash( $_GET['srp_last_name'] ?? '' ) );
 	$url_year      = sanitize_text_field( wp_unslash( $_GET['srp_year']      ?? '' ) );
 	$url_title     = sanitize_text_field( wp_unslash( $_GET['srp_title']     ?? '' ) );
 	$url_major     = sanitize_text_field( wp_unslash( $_GET['srp_major']     ?? '' ) );
 	$url_advisor   = sanitize_text_field( wp_unslash( $_GET['srp_advisor']   ?? '' ) );
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	$has_url_state = ( $url_last_name || $url_year || $url_title || $url_major || $url_advisor );
 
 	ob_start();

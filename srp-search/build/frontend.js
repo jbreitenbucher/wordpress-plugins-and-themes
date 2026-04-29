@@ -277,11 +277,11 @@
 		function buildRows( rows ) {
 			let h = '';
 			rows.forEach( function ( row ) {
-				const student  = escHtml( ( row.STUDENT_FIRST || '' ) + ' ' + ( row.STUDENT_LAST || '' ) );
+				const student  = escHtml( ( row.STUDENT_FIRST || '' ) + ' ' + ( row.ATTENDED_AS_LAST || '' ) );
 				const year     = escHtml( row.YEAR );
 				const title    = escHtml( row.IS_TITLE );
-				const major1   = escHtml( row.MAJOR_1 || '—' );
-				const major2   = row.MAJOR_2 && row.MAJOR_2.trim() ? escHtml( row.MAJOR_2 ) : null;
+				const major1   = escHtml( row.MAJOR_1_DESC || '—' );
+				const major2   = row.MAJOR_2_DESC && row.MAJOR_2_DESC.trim() ? escHtml( row.MAJOR_2_DESC ) : null;
 				const advisor  = ( row.ADVISOR_FIRST || row.ADVISOR_LAST )
 					? escHtml( ( row.ADVISOR_FIRST || '' ) + ' ' + ( row.ADVISOR_LAST || '' ) ) : '—';
 

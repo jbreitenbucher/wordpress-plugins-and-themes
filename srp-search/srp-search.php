@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     2.0.1
+ * Version:     2.1.0
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -28,10 +28,10 @@ const SRP_MAX_INPUT_LENGTH = 100;
 const SRP_RATE_LIMIT       = 30;
 
 const SRP_ORDER_MAP = [
-	'year_asc_name_asc'  => '[YEAR] ASC,  [STUDENT_LAST] ASC',
-	'name_asc_year_asc'  => '[STUDENT_LAST] ASC,  [YEAR] ASC',
-	'year_desc_name_asc' => '[YEAR] DESC, [STUDENT_LAST] ASC',
-	'name_asc'           => '[STUDENT_LAST] ASC',
+	'year_asc_name_asc'  => '[YEAR] ASC,  [ATTENDED_AS_LAST] ASC',
+	'name_asc_year_asc'  => '[ATTENDED_AS_LAST] ASC,  [YEAR] ASC',
+	'year_desc_name_asc' => '[YEAR] DESC, [ATTENDED_AS_LAST] ASC',
+	'name_asc'           => '[ATTENDED_AS_LAST] ASC',
 ];
 
 // ── 1. CONFIG CHECK ───────────────────────────────────────────────────────────
@@ -371,9 +371,9 @@ function srp_ajax_get_majors(): void {
 	set_transient( 'srp_majors_lock', 1, 10 );
 	try {
 		$pdo    = srp_get_pdo();
-		$sql    = "SELECT DISTINCT [MAJOR_1] AS major FROM " . SRP_VIEW . " WHERE [MAJOR_1] IS NOT NULL AND [MAJOR_1] <> ''
+		$sql    = "SELECT DISTINCT [MAJOR_1_DESC] AS major FROM " . SRP_VIEW . " WHERE [MAJOR_1_DESC] IS NOT NULL AND [MAJOR_1_DESC] <> ''
                   UNION
-                  SELECT DISTINCT [MAJOR_2] FROM " . SRP_VIEW . " WHERE [MAJOR_2] IS NOT NULL AND [MAJOR_2] <> ''
+                  SELECT DISTINCT [MAJOR_2_DESC] FROM " . SRP_VIEW . " WHERE [MAJOR_2_DESC] IS NOT NULL AND [MAJOR_2_DESC] <> ''
                   ORDER BY major ASC";
 		$stmt   = $pdo->query( $sql );
 		$majors = $stmt->fetchAll( PDO::FETCH_COLUMN ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__PDO
@@ -425,17 +425,17 @@ function srp_ajax_search(): void {
 	}
 
 	$where = []; $params = [];
-	if ( $last_name !== '' ) { $where[] = '[STUDENT_LAST] LIKE :last_name'; $params[':last_name'] = '%' . $last_name . '%'; }
-	if ( $year      !== '' ) { $where[] = '[YEAR] = :year';                  $params[':year']      = (int) $year; }
-	if ( $title     !== '' ) { $where[] = '[IS_TITLE] LIKE :title';          $params[':title']     = '%' . $title . '%'; }
-	if ( $major     !== '' ) { $where[] = '([MAJOR_1] = :major OR [MAJOR_2] = :major2)'; $params[':major'] = $major; $params[':major2'] = $major; }
-	if ( $advisor   !== '' ) { $where[] = '[ADVISOR_LAST] LIKE :advisor';    $params[':advisor']   = '%' . $advisor . '%'; }
+	if ( $last_name !== '' ) { $where[] = '[ATTENDED_AS_LAST] LIKE :last_name';  $params[':last_name'] = '%' . $last_name . '%'; }
+	if ( $year      !== '' ) { $where[] = '[YEAR] = :year';                                      $params[':year']      = (int) $year; }
+	if ( $title     !== '' ) { $where[] = '[IS_TITLE] LIKE :title';                              $params[':title']     = '%' . $title . '%'; }
+	if ( $major     !== '' ) { $where[] = '([MAJOR_1_DESC] = :major OR [MAJOR_2_DESC] = :major2)'; $params[':major'] = $major; $params[':major2'] = $major; }
+	if ( $advisor   !== '' ) { $where[] = '[ADVISOR_LAST] LIKE :advisor';                        $params[':advisor']   = '%' . $advisor . '%'; }
 
 	$where_clause = 'WHERE ' . implode( ' AND ', $where );
 	$count_sql    = "SELECT COUNT(*) FROM " . SRP_VIEW . " {$where_clause}";
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	$result_sql = "SELECT [STUDENT_FIRST],[STUDENT_LAST],[YEAR],[IS_TITLE],[MAJOR_1],[MAJOR_2],[ADVISOR_FIRST],[ADVISOR_LAST]
+	$result_sql = "SELECT [STUDENT_FIRST],[ATTENDED_AS_LAST],[YEAR],[IS_TITLE],[MAJOR_1_DESC],[MAJOR_2_DESC],[ADVISOR_FIRST],[ADVISOR_LAST]
 	               FROM " . SRP_VIEW . " {$where_clause}
 	               ORDER BY {$order_clause}
 	               OFFSET {$offset} ROWS FETCH NEXT {$per_page} ROWS ONLY";

@@ -42,12 +42,14 @@
 	grid-template-columns: 1fr 1fr 2fr 1fr 1fr;
 	gap: 0.875rem;
 	align-items: end;
+	padding-bottom: 1.25rem; /* room for absolutely-positioned hint below Title */
 }
 
 .srp-field-group {
 	display: flex;
 	flex-direction: column;
 	gap: 0.35rem;
+	position: relative; /* hint uses absolute positioning to hang below */
 }
 
 .srp-field-group label {
@@ -628,12 +630,16 @@
 	}
 }
 
-/* ── Field hint text ─────────────────────────────────────────── */
+/* ── Field hint — absolutely positioned below the input, invisible to layout */
 .srp-field-hint {
 	font-family: 'Source Sans 3', sans-serif;
 	font-size: 0.72rem;
 	color: var(--srp-muted);
 	font-style: italic;
-	margin-top: 0.2rem;
-	display: block;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	margin-top: 0.25rem;
+	white-space: nowrap;
 }
+

@@ -3,7 +3,7 @@
  * Plugin Name: SRP Search
  * Plugin URI:  https://wooster.edu
  * Description: Senior Research Project search block for the College of Wooster.
- * Version:     2.1.3
+ * Version:     2.1.7
  * Author:      College of Wooster
  * Requires at least: 6.2
  * Requires PHP: 7.4
@@ -237,7 +237,7 @@ function srp_render_block( array $attributes, string $content ): string {
 						autocomplete="off"
 						maxlength="<?php echo esc_attr( SRP_MAX_INPUT_LENGTH ); ?>"
 						value="<?php echo esc_attr( $url_title ); ?>" />
-					<span class="srp-field-hint">Multiple words all required</span>
+					<span class="srp-field-hint">Multiple words means all words must be in the title</span>
 				</div>
 
 				<div class="srp-field-group">

@@ -58,9 +58,9 @@ sudo systemctl restart apache2
 openssl x509 -inform DER -in issuer.cer -out mssql-ca.pem
 
 # Install on the WordPress server
-sudo mkdir -p /etc/ssl/wooster
-sudo cp mssql-ca.pem /etc/ssl/wooster/mssql-ca.pem
-sudo chmod 644 /etc/ssl/wooster/mssql-ca.pem
+sudo mkdir -p /etc/ssl/srp
+sudo cp mssql-ca.pem /etc/ssl/srp/mssql-ca.pem
+sudo chmod 644 /etc/ssl/srp/mssql-ca.pem
 sudo cp mssql-ca.pem /etc/pki/trust/anchors/
 sudo update-ca-certificates
 sudo systemctl restart apache2
@@ -70,9 +70,9 @@ sudo systemctl restart apache2
 
 ```sql
 CREATE LOGIN srp_readonly WITH PASSWORD = 'YourStrongPasswordHere';
-USE [R18-DataOrch-PROD];
+USE [Data_View];
 CREATE USER srp_readonly FOR LOGIN srp_readonly;
-GRANT SELECT ON [dbo].[IS_TITLES] TO srp_readonly;
+GRANT SELECT ON [dbo].[database] TO srp_readonly;
 ```
 
 ---
@@ -82,8 +82,8 @@ GRANT SELECT ON [dbo].[IS_TITLES] TO srp_readonly;
 ### Step 1 — Add constants to wp-config.php
 
 ```php
-define( 'SRP_DB_HOST',     'mssql2022.local.wooster.edu' );
-define( 'SRP_DB_NAME',     'R18-DataOrch-PROD' );
+define( 'SRP_DB_HOST',     'sql_server.host.tls' );
+define( 'SRP_DB_NAME',     'Data_View' );
 define( 'SRP_DB_USER',     'srp_readonly' );
 define( 'SRP_DB_PASSWORD', 'YOUR_PASSWORD_HERE' );
 define( 'SRP_DB_ENCRYPT',  true );
